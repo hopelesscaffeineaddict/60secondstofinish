@@ -1,0 +1,27 @@
+import json
+import csv
+
+JSON = 0
+CSV = 1
+
+def format_type(example_input):
+    if is_json(example_input):
+        return JSON
+    elif is_csv(example_input):
+        return CSV
+
+    return -1
+
+def is_json(input):
+    try:
+        json.loads(input.decode('utf-8'))
+        return True
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return False
+
+def is_csv(input):
+    try:
+        input = input.decode('utf-8')
+        return csv.Sniffer().has_header(input)
+    except UnicodeDecodeError:
+        return False
