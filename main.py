@@ -10,7 +10,6 @@ BINARIES_DIR = "binaries"
 INPUTS_DIR = "example_inputs"
 OUTPUT_DIR = "fuzzer_output"
 
-# shared condition to wakeup crash_worker when new crash is detected
 runners = []
 
 def main():
