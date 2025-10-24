@@ -108,16 +108,50 @@ def find_files(directory: str) -> list[str]:
 TODO: Add function which iterates over the files in binary_directory and example_input_directory 
 and matches them, returning it in a dict (?) (eg. csv1 -> csv1.txt)
 """
-def match_binaries_to_inputs():
-    return 
+def match_binaries_to_inputs(binary_directory: str, input_directory:str) -> dict: 
+    binary_files = find_files(binary_directory)
+
+    input files = find_files(input_directory)
+
+    for binary_file in binary_files:
+        binary_name = os.path.basename(binary_file)
+
+        matching_input = None
+        matches = {}
+
+        # Try exact match (eg. csv1 -> csv1.txt)
+        for input_file in input_files:
+            input_name = os.path.basename(input_file)
+
+            if input_name == f"{binary_name}.txt" or input_name == binary_name:
+                matching_input = input_file
+                break
+            
+        # No exact match: attempt to find input file that begins with binary name
+        if not matching_input:
+            for input_file in input_files:
+                input_name = os.path.basename(input_file)
+
+                if input_name.startswith(binary_name):
+                    matching_input = input_file
+                    break
+        
+        if matching_input:
+            matches[binary_file] = matching_input
+        else:
+            print(f"Error: No matching input file found for binary '{binary_name}'")
+
+    return matches 
 
 
 def main():
     try:
         args = parse_arguments()
+
         if not validate_arguments(args):
             sys.exit(1)
-
+        
+        matches = match_binaries_to_inputs(args.binary, args.input)
 
     except KeyboardInterrupt:
         print("\nFuzzing interrupted by user")
