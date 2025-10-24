@@ -9,7 +9,7 @@ import random
 from pathlib import Path
 
 
-# TODO: Complete function using argparse library 
+# TODO: Maybe this could be improved by adding other options (eg. either take in a directory or a file)
 """
 Reads in arguments from the stdin stream in the format:
 python main.py 
@@ -48,9 +48,48 @@ def parse_arguments(arguments: str):
 # TODO: Complete function for validating CLI arguments (eg. check whether directory paths exist, check
 # whether directory is empty, mismatched number of binaries to inputs, etc.)
 """ Validate CLI arguments"""
-def validate_arguments(arguments: str):
+def validate_arguments(args: argparse.Namespace) -> bool:
+    # Check if binary directory exists
+    if not os.path.isdir(args.binary):
+        print(f"Error: Binary directory '{args.binary}' does not exist")
+        return False
     
-
+    # Check if input directory exists
+    if not os.path.isdir(args.input):
+        print(f"Error: Input directory '{args.input}' does not exist")
+        return False
+    
+    # Create output directory if it doesn't exist
+    os.makedirs(args.output, exist_ok=True)
+    
+    # Check if binary directory is empty
+    binary_files = find_files(args.binary)
+    if not binary_files:
+        print(f"Error: Binary directory '{args.binary}' is empty")
+        return False
+    
+    # Check if input directory is empty
+    input_files = find_files(args.input)
+    if not input_files:
+        print(f"Error: Input directory '{args.input}' is empty")
+        return False
+    
+    # Check if mutations count is positive
+    if args.mutations <= 0:
+        print(f"Error: Number of mutations must be positive, got {args.mutations}")
+        return False
+    
+    # Check if timeout is positive
+    if args.timeout <= 0:
+        print(f"Error: Timeout must be positive, got {args.timeout}")
+        return False
+    
+    # Check if thread count is positive
+    if args.threads <= 0:
+        print(f"Error: Number of threads must be positive, got {args.threads}")
+        return False
+    
+    return True
 
 """
 Finds all files in the specified directory and returns it as a list of files
@@ -75,7 +114,10 @@ def match_binaries_to_inputs():
 
 def main():
     try:
-        input_data = parse_arguments()
+        args = parse_arguments()
+        if not validate_arguments(args):
+            sys.exit(1)
+
 
     except KeyboardInterrupt:
         print("\nFuzzing interrupted by user")
