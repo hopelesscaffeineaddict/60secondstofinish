@@ -15,12 +15,35 @@ Reads in arguments from the stdin stream in the format:
 python main.py 
 """
 def parse_arguments(arguments: str):
-    input_data = str(sys.argv)
-    n_args = len(sys.argv)
+    parser = argparse.ArgumentParser(
+        description="60secondstofinish: Black Box Fuzzer project for COMP6447"
+    )
 
-    print(input_data, n_args)
+    parser.add_argument(
+        "--binary", "-b", type=str, help = "Path to target directory containing binaries to fuzz"
+    )
 
-    return input_data
+    parser.add_argument(
+        "--input", "-i", type=str, help = "Path to target directory containing example inputs for binaries"
+    )
+
+    parser.add_argument(
+        "--output", "-o", type=str, default="./fuzzer_output", help = "Path to output directory containing fuzzer results (default: /fuzzer_output)"
+    )
+
+    parser.add_argument(
+        "--mutations", "-m", type=int, default=5000, help="Maximum number of mutations per binary (default: 5000)"
+    )
+
+    parser.add_argument(
+        "--timeout", "-t", type=int, default=5, help="Timeout (seconds) for each execution (default: 5)"
+    )
+
+    parser.add_argument(
+        "--threads", "-s", type=int, default=8, help="Number of parallel threads per binary (default: 8)"
+    )
+
+    return parser.parse_args()
 
 # TODO: Complete function for validating CLI arguments (eg. check whether directory paths exist, check
 # whether directory is empty, mismatched number of binaries to inputs, etc.)
