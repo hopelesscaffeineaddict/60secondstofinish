@@ -5,10 +5,13 @@ JSON = 0
 CSV = 1
 
 # Determines the format type corresponding to the provided input
-def format_type(example_input):
-    if is_json(example_input):
+def format_type(example_input_file):
+    with open(example_input_file, "rb") as input_file:
+        input = input_file.read()
+
+    if is_json(input):
         return JSON
-    elif is_csv(example_input):
+    elif is_csv(input):
         return CSV
 
     return -1
