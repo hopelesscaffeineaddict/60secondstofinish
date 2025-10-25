@@ -20,7 +20,7 @@ class MagicBytes:
     ELF = b"\x7FELF"
     PDF = b"%PDF"
 
-# Determines the format type corresponding to the provided input (first 1-2kb of file)
+# Determines the format type corresponding to the provided input (first 2kb of file)
 def format_type(example_input_file: str) -> FormatType:
     try:
         with open(example_input_file, "rb") as input_file:
@@ -41,10 +41,8 @@ def format_type(example_input_file: str) -> FormatType:
         return FormatType.PDF
     elif is_elf(input):
         return FormatType.ELF
-    elif is_plaintext:
-        return FormatType.PLAINTEXT
     
-    return FormatType.UNKNOWN
+    return FormatType.PLAINTEXT
 
 # Checks if the provided byte input is a JSON format
 def is_json(input: bytes) -> bool:
@@ -76,20 +74,14 @@ def is_xml(input: bytes) -> bool:
         return False 
 
 # Checks if provided byte input is jpeg using magic bytes
-# def is_jpeg(input: bytes) -> bool:
-#     try:
-#         input = input.decode('utf-8')
-#     except:
-#         return False
+def is_jpeg(input: bytes) -> bool:
+    return input.startswith(MagicBytes.JPEG)
 
 # Checks if provided byte input is pdf using magic bytes
 def is_pdf(input: bytes) -> bool:
-    return False
+    return input.startswith(MagicBytes.PDF)
 
 # Checks if provided byte input is elf using magic bytes 
 def is_elf(input: bytes) -> bool:
-    return False
+    return input.startswith(MagicBytes.ELF)
 
-# Checks if provided byte input is plaintext 
-def is_plaintext(input: bytes) -> bool:
-    return False 
