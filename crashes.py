@@ -16,7 +16,6 @@ class CrashHandler():
 
         # For tracking statistics
         self.stats = {
-            'total_executions': 0,
             'crashes_found': 0,
             'timeouts_found': 0,
             'crash_types': {},
@@ -45,9 +44,6 @@ class CrashHandler():
             print(new_crash)
             result = new_crash["result"]
             crash_input = new_crash["input"]
-
-            # Update statistics
-            self.stats['total_executions'] += 1
 
             # Track crash types
             if result.crashed:
@@ -117,10 +113,5 @@ class CrashHandler():
         
         self.stats['end_time'] = time.time()
         self.stats['total_time'] = self.stats['end_time'] - self.stats['start_time']
-        
-        if self.stats['total_time'] > 0:
-            self.stats['executions_per_second'] = self.stats['total_executions'] / self.stats['total_time']
-        else:
-            self.stats['executions_per_second'] = 0
-            
+    
         return self.stats
