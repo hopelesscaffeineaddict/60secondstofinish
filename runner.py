@@ -1,7 +1,13 @@
 import subprocess
 import threading
 import multiprocessing as mp
+import signal
+import os
+import re
+import time
 import crashes
+from pathlib import Path
+from models import ExecutionResult, CrashType
 
 class Runner():
     def __init__(self, binary, mutator, ctx):
@@ -44,6 +50,56 @@ class Runner():
                     self.crash_handler.crashes.append({"result": res, "input": input, "type": "timeout"})
                     self.crash_condition.notify()
 
+    # analyse execution results to determine if a crash occurred
+    def analyse_crash(self, return_code:int, stderr: bytes, execution_time: float):
+        # signal based crash detection
+        if return_code < 0:
+            signal_num = abs(return_code)
+            crash_type = self._signal_to_crash_type(signal_num)
+            if crash_type:
+                return crash_type
+        
+        # better crash analysis w pattern matching from models.py 
+        # i really don't know if this works i'm just throwing shit at the wall 
+        stderr_str = stderr.decode("utf-8", errors="ignore").lower()
+        crash_patterns = {
+            "segmentation fault": CrashType.SEGFAULT,
+            "segfault": CrashType.SEGFAULT,
+            "abort": CrashType.ABORT,
+            "assertion": CrashType.ABORT,
+            "buffer overflow": CrashType.BUFFER_OVERFLOW,
+            "stack overflow": CrashType.BUFFER_OVERFLOW,
+            "heap overflow": CrashType.BUFFER_OVERFLOW,
+            "use after free": CrashType.USE_AFTER_FREE,
+            "double free": CrashType.DOUBLE_FREE,
+            "invalid read": CrashType.INVALID_READ,
+            "invalid write": CrashType.INVALID_WRITE
+        }
+
+        for pattern, crash_type in crash_patterns.items():
+            if pattern in stderr.str:
+                return crash_type
+        
+        return None
+
+    # convert signal no. to crash type
+    def signal_to_crash_type(self, signal_num: int):
+        signal_map = {
+            signal.SIGSEGV: CrashType.SEGFAULT,
+            signal.SIGABRT: CrashType.ABORT,
+            signal.SIGBUS: CrashType.INVALID_READ,
+            signal.SIGFPE: CrashType.INVALID_READ,
+        }
+        return signal_map.get(signal_num)
+
+    # extract signal number from stderr output
+    def extract_signal_from_stderr(self, stderr: bytes):
+        stderr_str = stderr.decode("utf-8", errors="ignore")
+        signal_match = re.search(r"signal \w+ \((\d+)\)", stderr_str)
+        if signal_match:
+            return int(signal_match.group(1))
+        return None
+    
     # starts the crash handler thread and runner loop process
     def start(self):
         # start crash handler thread
@@ -70,3 +126,4 @@ class Runner():
         # stop process runner
         if self.proc:
             self.proc.terminate()
+
