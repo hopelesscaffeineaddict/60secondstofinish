@@ -3,7 +3,9 @@ import sys
 import subprocess
 import threading
 import multiprocessing as mp
-from format import format_type, JSON, CSV
+import time
+from format import format_type, FormatType
+from mutator import Mutator
 from runner import Runner
 from inputs import parse_arguments, validate_arguments, match_binaries_to_inputs
 
@@ -33,10 +35,10 @@ def main():
             print(f"Starting fuzzing for {binary}")
 
             format = format_type(input)
-            if format == JSON:
+            if format == FormatType.JSON:
                 # TODO: create a JSON mutator
                 print("JSON")
-            elif format == CSV:
+            elif format == FormatType.CSV:
                 # TODO: create a CSV mutator
                 print("CSV")
             else:

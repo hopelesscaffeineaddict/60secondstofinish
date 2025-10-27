@@ -106,11 +106,11 @@ def match_binaries_to_inputs(binary_directory: str, input_directory:str) -> dict
 
     input_files = find_files(input_directory)
 
+    matches = {}
     for binary_file in binary_files:
         binary_name = os.path.basename(binary_file)
 
         matching_input = None
-        matches = {}
 
         # Try exact match (eg. csv1 -> csv1.txt)
         for input_file in input_files:
