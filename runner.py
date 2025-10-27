@@ -21,6 +21,7 @@ class Runner():
         self.crash_thread = threading.Thread(target=self.crash_handler.start)
 
         self.proc = None
+        self.stats = {'total executions': 0}
 
     # executes target binary with a single input and returns the ExecutionResult
     def execute_with_harness(self, input_data: bytes) -> ExecutionResult:
@@ -99,22 +100,39 @@ class Runner():
                 # if program has shut down, break out of loop
                 if self.stop_event.is_set():
                     break
-
+                # get input data from queue 
                 input = self.mutator.input_queue.pop(0)
 
-            try:
-                # run the binary with the given input
-                res = subprocess.run(self.binary, input=input, timeout=2.0)
-                # if there is a crash, add it to the crash handlers queue
-                if res.returncode != 0:
-                    with self.crash_condition:
-                        self.crash_handler.crashes.append({"result": res, "input": input, "type": "fail"})
-                        self.crash_condition.notify()
-            except subprocess.TimeoutExpired:
-                # if there is a timeout, add it to the crash handlers queue
+            # get ExecutionResult from harness and increment total execution stats
+            self.stats['total_executions'] += 1
+            result = self.execute_with_harness(input)
+
+            # stop thread after first crash 
+            # unsure but do we need to create some additional feature that 
+            # stops all threads that run the same binary if a crash is found (cuz
+            # rn it only stops the thread that's seen the crash -> not good if 
+            # there are multiple threads fuzzing the same binary cuz we only need 1 crash
+            if result.crashed:
                 with self.crash_condition:
-                    self.crash_handler.crashes.append({"result": res, "input": input, "type": "timeout"})
+                    self.crash_handler.crashes.append({"result": result, "input": input_data})
                     self.crash_condition.notify()
+                break
+
+                #     input = self.mutator.input_queue.pop(0)
+
+            # try:
+            #     # run the binary with the given input
+            #     res = subprocess.run(self.binary, input=input, timeout=2.0)
+            #     # if there is a crash, add it to the crash handlers queue
+            #     if res.returncode != 0:
+            #         with self.crash_condition:
+            #             self.crash_handler.crashes.append({"result": res, "input": input, "type": "fail"})
+            #             self.crash_condition.notify()
+            # except subprocess.TimeoutExpired:
+            #     # if there is a timeout, add it to the crash handlers queue
+            #     with self.crash_condition:
+            #         self.crash_handler.crashes.append({"result": res, "input": input, "type": "timeout"})
+            #         self.crash_condition.notify()
 
     # analyse execution results to determine if a crash occurred
     def analyse_crash(self, return_code:int, stderr: bytes, execution_time: float):
