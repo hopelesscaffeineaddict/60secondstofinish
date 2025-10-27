@@ -1,4 +1,8 @@
 import os
+import time
+
+from models import ExecutionResult, CrashType
+from Typing import Optional
 
 OUTPUT_DIR = "fuzzer_output"
 
@@ -66,7 +70,6 @@ class CrashHandler():
 
     """ Saves crashing input and generates report in output_fuzzer """
     def save_crash(self, result: ExecutionResult, crash_input: bytes):
-        """Save the crashing input and generate a detailed report."""
         # Define the output file path
         out_file = os.path.join(OUTPUT_DIR, f"bad_{self.binary_name}.txt")
         
