@@ -8,11 +8,10 @@ from format import format_type, FormatType
 from mutator import Mutator
 from runner import Runner
 from inputs import parse_arguments, validate_arguments, match_binaries_to_inputs
-from crashes import CrashHandler
 
-from mutator_thread import MutatorThread
-from runner_thread import RunnerThread
-from crash_thread import CrashHandlerThread
+from mutator import Mutator
+from runner import Runner
+from crashes import CrashHandler
 
 ## GLOBALS ##
 BINARIES_DIR = "binaries"
@@ -21,7 +20,7 @@ OUTPUT_DIR = "fuzzer_output"
 
 runners = []
 
-def binary_controller(binary_path, example_input, fuzz_time = 60):
+def binary_process(binary_path, example_input, fuzz_time = 60):
     # event to signal runner process to stop
     stop_event = threading.Event()
     # condition the crash handler waits on (when waiting for a crash to analayse)
@@ -30,9 +29,9 @@ def binary_controller(binary_path, example_input, fuzz_time = 60):
     input_queue = queue.Queue(maxsize=500)
 
     # create mutator, crash handler and runner threads
-    crash_handler = CrashHandlerThread(binary_path, crash_condition, stop_event)
-    mutator = MutatorThread(example_input, input_queue, stop_event)
-    runner = RunnerThread(binary_path, input_queue, crash_handler, stop_event)
+    crash_handler = CrashHandler(binary_path, crash_condition, stop_event)
+    mutator = Mutator(example_input, input_queue, stop_event)
+    runner = Runner(binary_path, input_queue, crash_handler, stop_event)
 
     print(f"Starting fuzzing for {binary_path}")
     crash_handler.start()
@@ -74,27 +73,17 @@ def main():
             # TODO: eventually create child classes of the parent Mutator and use that to distinguish
             # between format types
 
-            # format = format_type(input)
-            # if format == FormatType.UNKNOWN:
-            #     print(f"Invalid format, skipping {binary}")
-            #     continue
-
-            # mutator = Mutator(input, ctx, format, args.mutations)
-
-            # new_runner = Runner(binary, mutator, ctx)
-            # new_runner.start()
-
-            # runners.append(new_runner)
             with open(input, "rb") as input_file:
                 input_data = input_file.read()
-            proc = ctx.Process(target=binary_controller, args=(binary, input_data, 60))
+
+            # create new binary process
+            proc = ctx.Process(target=binary_process, args=(binary, input_data, 60))
             proc.start()
             runners.append(proc)
 
-        # stop each runner (finish all processes/threads)
+        # stop each runner (wait for processes/threads to complete safely)
         for runner in runners:
             runner.join()
-            # runner.stop()
 
             # # NOTE: if there's multiple threads/binary, similar to note in Runner,
             # # we might have to add some kinda feature that groups threads together based on binary
@@ -120,10 +109,6 @@ def main():
             # print(f"Timeouts found: {crash_stats['timeouts_found']}")
             # print(f"Total time: {total_time:.2f}s")
             # print(f"Executions per second: {executions_per_second:.2f}")
-
-    except KeyboardInterrupt:
-        print("\nFuzzing interrupted by user")
-        sys.exit(130)
     except Exception as e:
         print(f"Error during fuzzing: {e}")
         sys.exit(1)
