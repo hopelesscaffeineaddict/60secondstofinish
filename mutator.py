@@ -10,13 +10,60 @@ class Mutator():
     }
 
 
-    def __init__(self):
+    def __init__(self, input: bytes, ctx, format_type, max_mutations: int):
+        self.input = input
+        self.ctx = ctx
+        self.format_type = format_type
+        self.max_mutations = max_mutations
+
         self.input_queue = []
-        self.condition = threading.Condition()
+        self.mutator_condition = threading.Condition()
+        self.stop_event = ctx.Event()
+        self.mutator_thread = threading.Thread(target=self.mutator_loop)
+
+    def mutator_loop(self):
+        mutations_done = 0
+
+        # generate new mutated input
+        while not self.stop_event.is_set():
+            mutated_input = self.mutate(self.input)
+        
+            # add input to queue
+            with self.mutator_condition:
+                self.input_queue.append(mutated_input)
+
+                # notify runner thread that new input is available 
+                self.mutator_condition.notify()
+
+                mutations_done += 1
 
     # TODO: in the mutator function, when an input is added to the input_queue, notify the condition
     def start(self):
-        print("TODO")
+        self.mutator_thread.start()
+
+    # terminate mutator thread
+    def stop(self):
+        self.stop_event.set()
+        self.mutator_thread.join()
+
+    # uses one of the below mutation strategies randomly
+    def mutate(self, data: bytes):
+        strategy = random.choice(['delete_rand_char', 
+                                'insert_rand_char', 
+                                'bit_flip_not', 
+                                'bit_flip_rand', 
+                                'splice_bits'])
+
+        if strategy == 'delete_rand_char':
+            mutated_str = self.delete_rand_char(input)
+        elif strategy == 'insert_rand_char':
+            mutated_str = self.insert_rand_char(input)
+        elif strategy == 'bit_flip_not':
+            mutated_str = self.bit_flip_not(input)
+        elif strategy == 'bit_flip_rand':
+            mutated_str = self.bit_flip_rand(input)
+        elif strategy == 'splice_bits':
+            mutated_str = self.splice_bits(input)
 
     """Delete a random character from input"""
     def delete_rand_char(input: str):

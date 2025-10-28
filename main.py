@@ -31,9 +31,13 @@ def main():
 
         ctx = mp.get_context("forkserver")
 
-        # gonna create basic mutator just to test first
+
+        # delete later???? idk
+        # gonna create basic mutator w sample input just to test first
         sample_input = b"test input"
-        mutator = Mutator(sample_input, ctx)
+        format = format_type(sample_input)
+        max_mutations = args.mutations
+        mutator = Mutator(sample_input, ctx, format)
 
         # iterate over all binaries in the binary folder
         for binary, input in matches:
