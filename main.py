@@ -44,16 +44,15 @@ def binary_process(binary_path, example_input, fuzz_time = 60):
             time.sleep(1)
     except KeyboardInterrupt:
         print(f"Fuzzing interrupted by user for {binary_path}")
+    finally:
+        # clean up threads
+        stop_event.set()
+        print(f"Stopping fuzzing for {binary_path} after {fuzz_time}s")
 
-    # clean up threads
-    stop_event.set()
-    print(f"Stopping fuzzing for {binary_path} after {fuzz_time}s")
-
-    runner.join(timeout=1)
-    mutator.join(timeout=1)
-    crash_handler.join(timeout=1)
-    print(f"Finished fuzzing {binary_path}")
-
+        runner.join(timeout=1)
+        mutator.join(timeout=1)
+        crash_handler.join(timeout=1)
+        print(f"Finished fuzzing {binary_path}")
 
 def main():
     global runners
@@ -79,7 +78,9 @@ def main():
             # create new binary process
             proc = ctx.Process(target=binary_process, args=(binary, input_data, 60))
             proc.start()
-            runners.append(proc)
+
+            # UNCOMMENT: if you want to run binaries sequentially
+            # runners.append(proc)
 
         # stop each runner (wait for processes/threads to complete safely)
         for runner in runners:
