@@ -2,7 +2,7 @@ import os
 import time
 
 from models import ExecutionResult, CrashType
-from Typing import Optional
+from typing import Optional
 
 OUTPUT_DIR = "fuzzer_output"
 
@@ -40,12 +40,12 @@ class CrashHandler():
 
                 new_crash = self.crashes.pop(0)
 
-            # Process crash
+            # process crash
             print(new_crash)
             result = new_crash["result"]
             crash_input = new_crash["input"]
 
-            # Track crash types
+            # track crash types
             if result.crashed:
                 self.stats['crashes_found'] += 1
 
@@ -58,59 +58,50 @@ class CrashHandler():
                     self.stats['crash_types'][crash_type_str] = 0
                 self.stats['crash_types'][crash_type_str] += 1
 
-            # Save crash
+            # save crash
             self.save_crash(result, crash_input)
 
-            # Signal runner to stop after saving first crash
+            # signal runner to stop after saving first crash
             break
 
-    """ Saves crashing input and generates report in output_fuzzer """
+    # save crash output
     def save_crash(self, result: ExecutionResult, crash_input: bytes):
-        # Define the output file path
         out_file = os.path.join(OUTPUT_DIR, f"bad_{self.binary_name}.txt")
         
-        # Save the crashing input to the file
+        # save crashing input to file
         with open(out_file, "wb") as f:
             f.write(crash_input)
         
-        # Generate a detailed crash report
+        #  generate crash report
         report_file = os.path.join(OUTPUT_DIR, f"bad_{self.binary_name}.report")
         with open(report_file, "w") as f:
             f.write(f"Crash Report for {self.binary_name}\n")
-            f.write("=" * 50 + "\n\n")
             f.write(f"Crash Type: {result.crash_type.value if result.crash_type else 'Unknown'}\n")
             f.write(f"Return Code: {result.return_code}\n")
             f.write(f"Signal: {result.signal}\n")
             f.write(f"Execution Time: {result.execution_time:.4f} seconds\n\n")
             
             f.write("stderr output:\n")
-            f.write("-" * 20 + "\n")
             f.write(result.stderr.decode('utf-8', errors='ignore'))
-            f.write("\n\n")
             
             f.write("stdout output:\n")
-            f.write("-" * 20 + "\n")
             f.write(result.stdout.decode('utf-8', errors='ignore'))
-            f.write("\n\n")
             
             f.write("input data:\n")
-            f.write("-" * 20 + "\n")
             f.write(repr(crash_input[:1024]))
             if len(crash_input) > 1024:
                 f.write(f"\n... ({len(crash_input) - 1024} more bytes)")
         
-        print(f"[+] Found crash for {self.binary_name}! Type: {result.crash_type.value if result.crash_type else 'Unknown'}")
-        print(f"[+] Saved crashing input to {out_file}")
-        print(f"[+] Saved detailed report to {report_file}")
-        
-        # Print a snippet of stderr for immediate feedback
+        print(f"Crash found for {self.binary_name}! Type: {result.crash_type.value if result.crash_type else 'Unknown'}")
+        print(f"Saved crashing input to {out_file}")
+        print(f"Detailed report saved to {report_file}")
+
         stderr_preview = result.stderr.decode('utf-8', errors='ignore')[:200]
         if stderr_preview:
             print(f"[+] stderr preview: {stderr_preview}...")
 
-    """Return the current statistics."""
-    def get_statistics(self) -> Dict[str, Any]:
-        
+    # return current stats
+    def get_statistics(self):
         self.stats['end_time'] = time.time()
         self.stats['total_time'] = self.stats['end_time'] - self.stats['start_time']
     

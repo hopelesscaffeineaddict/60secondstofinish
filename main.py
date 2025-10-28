@@ -8,7 +8,7 @@ from format import format_type, FormatType
 from mutator import Mutator
 from runner import Runner
 from inputs import parse_arguments, validate_arguments, match_binaries_to_inputs
-from crashes import get_statistics 
+from crashes import CrashHandler 
 
 ## GLOBALS ##
 BINARIES_DIR = "binaries"
@@ -73,7 +73,7 @@ def main():
 
             # calculate executions per second to assess program speed
             executions_per_second = 0
-            if total_time = 0:
+            if total_time == 0:
                 executions_per_second = total_executions / total_time
             
             # per-binary fuzzer statistics in terminal

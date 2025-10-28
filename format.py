@@ -1,6 +1,6 @@
 import json
 import csv
-from lxml import etree
+import xml.etree.ElementTree as ET
 from enum import Enum
 
 # Enum for supported input formats
@@ -68,9 +68,9 @@ def is_csv(input: bytes) -> bool:
 # Checks if the provided byte input is a XML format
 def is_xml(input: bytes) -> bool:
     try:
-        etree.fromstring(input.decode('utf-8'))
+        ET.fromstring(input.decode('utf-8'))
         return True
-    except etree.ParseError:
+    except ET.ParseError:
         return False 
 
 # Checks if provided byte input is jpeg using magic bytes

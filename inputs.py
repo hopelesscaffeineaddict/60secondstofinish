@@ -7,7 +7,7 @@ from pathlib import Path
 Reads in arguments from the stdin stream in the format:
 python main.py
 """
-def parse_arguments(arguments: str):
+def parse_arguments():
     parser = argparse.ArgumentParser(
         description="60secondstofinish: Black Box Fuzzer project for COMP6447"
     )
