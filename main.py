@@ -29,8 +29,9 @@ def binary_process(binary_path, example_input, fuzz_time = 60):
     input_queue = queue.Queue(maxsize=500)
 
     # create mutator, crash handler and runner threads
+    binary_name = os.path.basename(binary_path)
     crash_handler = CrashHandler(binary_path, crash_condition, stop_event)
-    mutator = Mutator(example_input, input_queue, stop_event)
+    mutator = Mutator(example_input, input_queue, stop_event, binary_name)
     runner = Runner(binary_path, input_queue, crash_handler, stop_event)
 
     print(f"Starting fuzzing for {binary_path}")
@@ -54,6 +55,25 @@ def binary_process(binary_path, example_input, fuzz_time = 60):
     crash_handler.join(timeout=1)
     print(f"Finished fuzzing {binary_path}")
 
+    # get execution stats from Runner
+    runner_stats = runner.stats
+    total_executions = runner_stats['total_executions']
+
+    # get crash stats and timing from CrashHandler
+    crash_stats = runner.crash_handler.get_statistics()
+    total_time = crash_stats['total_time']
+
+    # calculate executions per second to assess program speed
+    executions_per_second = 0
+    if total_time == 0:
+        executions_per_second = total_executions / total_time
+
+    # per-binary fuzzer statistics in terminal
+    print(f"Total executions: {total_executions}")
+    print(f"Crashes found: {crash_stats['crashes_found']}")
+    print(f"Timeouts found: {crash_stats['timeouts_found']}")
+    print(f"Total time: {total_time:.2f}s")
+    print(f"Executions per second: {executions_per_second:.2f}")
 
 def main():
     global runners
@@ -88,27 +108,6 @@ def main():
             # # NOTE: if there's multiple threads/binary, similar to note in Runner,
             # # we might have to add some kinda feature that groups threads together based on binary
             # # and outputs aggregate/avg stats for each group of threads.
-
-            # # get execution stats from Runner
-            # runner_stats = runner.stats
-            # total_executions = runner_stats['total_executions']
-
-            # # get crash stats and timing from CrashHandler
-            # crash_stats = runner.crash_handler.get_statistics()
-            # total_time = crash_stats['total_time']
-
-            # # calculate executions per second to assess program speed
-            # executions_per_second = 0
-            # if total_time == 0:
-            #     executions_per_second = total_executions / total_time
-
-            # # per-binary fuzzer statistics in terminal
-            # print(f"[*] Finished fuzzing for {os.path.basename(runner.binary)}!")
-            # print(f"Total executions: {total_executions}")
-            # print(f"Crashes found: {crash_stats['crashes_found']}")
-            # print(f"Timeouts found: {crash_stats['timeouts_found']}")
-            # print(f"Total time: {total_time:.2f}s")
-            # print(f"Executions per second: {executions_per_second:.2f}")
     except Exception as e:
         print(f"Error during fuzzing: {e}")
         sys.exit(1)

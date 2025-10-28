@@ -12,12 +12,21 @@ class Mutator(threading.Thread):
         "LLONG_MAX": 9223372036854775807
     }
 
-    def __init__(self, example_input, input_queue, stop_event, max_queue_size=200):
+    def __init__(self, example_input, input_queue, stop_event, binary_name, max_queue_size=200):
         super().__init__(daemon=True)
         self.input = example_input
         self.input_queue = input_queue
         self.stop_event = stop_event
         self.max_queue_size = max_queue_size
+
+        # create mutated input dir if it doesn't exist
+        curr_dir = os.getcwd()
+        mutated_dir = f"{curr_dir}/mutated_inputs"
+        os.makedirs(mutated_dir, exist_ok=True)
+
+        logfile_path = f"{mutated_dir}/mutated_{binary_name}.txt"
+        self.log_file = open(logfile_path, "ab")
+        self.log_file.write(f"example_input: {example_input}".encode())
 
     def run(self):
         mutations_done = 0
@@ -28,13 +37,20 @@ class Mutator(threading.Thread):
                 mutated_input = self.mutate()
                 # add input to queue
                 try:
-                    self.input_queue.put(mutated_input, timeout=0.5)
+                    self.input_queue.put(mutated_input, timeout=0.01)
                     mutations_done += 1
+
+                    # log mutation
+                    self.log_file.write(f"{mutations_done}: ".encode() + b' '+ mutated_input + b'\n')
+                    self.log_file.flush()
+
                 except queue.Full:
                     pass
             else:
                 # small sleep to allow queue to make space
                 time.sleep(0.01)
+            
+        self.log_file.close()
 
     def mutate(self):
         strategy = random.choice(['delete_rand_char',
