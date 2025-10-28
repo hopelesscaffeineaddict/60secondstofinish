@@ -1,51 +1,34 @@
+import time
 import threading
 import random
+import queue
 
-class Mutator():
-    known_ints = {
-        "CHAR_MAX": 255,
-        "INT_MAX": 2147483647,
-        "UINT_MAX": 4294967295,
-        "LLONG_MAX": 9223372036854775807
-    }
+class MutatorThread(threading.Thread):
+    def __init__(self, example_input, input_queue, stop_event, max_queue_size=200):
+        super().__init__(daemon=True)
+        self.input = example_input
+        self.input_queue = input_queue
+        self.stop_event = stop_event
+        self.max_queue_size = max_queue_size
 
-    def __init__(self, input: bytes, ctx, format_type, max_mutations: int):
-        self.input = input
-        self.ctx = ctx
-        self.format_type = format_type
-        self.max_mutations = max_mutations
-
-        self.input_queue = []
-        self.condition = threading.Condition()
-        self.stop_event = ctx.Event()
-        self.mutator_thread = threading.Thread(target=self.mutator_loop)
-
-    def mutator_loop(self):
+    def run(self):
         mutations_done = 0
 
         # generate new mutated input
         while not self.stop_event.is_set():
-            mutated_input = self.mutate()
-            print(f"MUTATOR INPUT: {mutated_input}")
-            # add input to queue
-            with self.condition:
-                self.input_queue.append(mutated_input)
+            if self.input_queue.qsize() < self.max_queue_size:
+                mutated_input = self.mutate()
+                print(f"MUTATOR INPUT: {mutated_input}")
+                # add input to queue
+                try:
+                    self.input_queue.put(mutated_input, timeout=0.5)
+                    mutations_done += 1
+                except queue.Full:
+                    pass
+            else:
+                # small sleep to allow queue to make space
+                time.sleep(0.01)
 
-                # notify runner thread that new input is available
-                self.condition.notify()
-
-                mutations_done += 1
-
-    # TODO: in the mutator function, when an input is added to the input_queue, notify the condition
-    def start(self):
-        self.mutator_thread.start()
-
-    # terminate mutator thread
-    def stop(self):
-        self.stop_event.set()
-        self.mutator_thread.join()
-
-    # uses one of the below mutation strategies randomly
     def mutate(self):
         strategy = random.choice(['delete_rand_char',
                                 'insert_rand_char',
@@ -67,8 +50,7 @@ class Mutator():
         return mutated_str
 
     """Delete a random character from input"""
-    def delete_rand_char(input: str):
-
+    def delete_rand_char(self, input):
         if input == "":
             return input
 
@@ -77,7 +59,7 @@ class Mutator():
         return input[:pos] + input[pos + 1:]
 
     """Insert a random character into input"""
-    def insert_rand_char(input: str):
+    def insert_rand_char(self, input):
 
         pos = random.randint(0, len(input))
         random_character = chr(random.randrange(32, 127))
@@ -85,13 +67,13 @@ class Mutator():
         return input[:pos] + random_character + input[pos:]
 
     """Twos complement bit flip of input"""
-    def bit_flip_not(input: str):
+    def bit_flip_not(self, input):
         return ~input
 
     # def byte_flips(input):
 
     """Bit flip of input"""
-    def bit_flip_rand(input: str):
+    def bit_flip_rand(self, input):
         if input == "":
             return input
 
@@ -104,7 +86,7 @@ class Mutator():
         return input[:pos] + new_c + input[pos + 1:]
 
     """Splice random size of bytes from input at a random position"""
-    def splice_bits(input: str):
+    def splice_bits(self, input):
         start_pos = random.randint(0, len(input) - 2)
         # end_pos = random.randint(start_pos + 1, len(input) - 1)
         size = random.randint(1, len(input) - start_pos)
@@ -113,13 +95,3 @@ class Mutator():
         splice = shift & mask
 
         return splice
-
-    # """Overwrite data with known ints"""
-    # def known_ints():
-    #     if input == "":
-    #         return input  
-
-    #     pos = random.randint(0, len(input) - 1)
-    #     pos 
-    #     return input[:pos] + random_character + input[pos + 2:]
-

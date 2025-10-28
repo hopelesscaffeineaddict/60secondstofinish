@@ -97,7 +97,7 @@ def find_files(directory: str) -> list[str]:
     return sorted(files)
 
 """
-TODO: Add function which iterates over the files in binary_directory and example_input_directory 
+TODO: Add function which iterates over the files in binary_directory and example_input_directory
 and matches them, returning it in a dict (?) (eg. csv1 -> csv1.txt)
 """
 def match_binaries_to_inputs(binary_directory: str, input_directory:str) -> dict:
@@ -108,7 +108,6 @@ def match_binaries_to_inputs(binary_directory: str, input_directory:str) -> dict
     matches = {}
     for binary_file in binary_files:
         binary_name = os.path.basename(binary_file)
-
         matching_input = None
 
         # Try exact match (eg. csv1 -> csv1.txt)

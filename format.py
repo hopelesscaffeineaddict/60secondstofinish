@@ -6,7 +6,7 @@ from enum import Enum
 # Enum for supported input formats
 class FormatType(Enum):
     JSON = 0
-    CSV = 1 
+    CSV = 1
     XML = 2
     JPEG = 3
     PDF = 4
@@ -41,7 +41,7 @@ def format_type(example_input_file: str) -> FormatType:
         return FormatType.PDF
     elif is_elf(input):
         return FormatType.ELF
-    
+
     return FormatType.PLAINTEXT
 
 # Checks if the provided byte input is a JSON format
@@ -60,7 +60,7 @@ def is_csv(input: bytes) -> bool:
         if not input.strip():
             return False
         # Check if it resembles CSV file
-        csv.Sniffer().sniff(decoded_input)
+        csv.Sniffer().sniff(input)
         return True
     except (csv.Error, UnicodeDecodeError):
         return False
@@ -71,7 +71,7 @@ def is_xml(input: bytes) -> bool:
         ET.fromstring(input.decode('utf-8'))
         return True
     except ET.ParseError:
-        return False 
+        return False
 
 # Checks if provided byte input is jpeg using magic bytes
 def is_jpeg(input: bytes) -> bool:
@@ -81,7 +81,7 @@ def is_jpeg(input: bytes) -> bool:
 def is_pdf(input: bytes) -> bool:
     return input.startswith(MagicBytes.PDF)
 
-# Checks if provided byte input is elf using magic bytes 
+# Checks if provided byte input is elf using magic bytes
 def is_elf(input: bytes) -> bool:
     return input.startswith(MagicBytes.ELF)
 
