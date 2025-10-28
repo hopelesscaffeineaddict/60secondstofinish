@@ -3,6 +3,7 @@ import argparse
 from pathlib import Path
 
 # TODO: Maybe this could be improved by adding other options (eg. either take in a directory or a file)
+
 """
 Reads in arguments from the stdin stream in the format:
 python main.py
@@ -84,14 +85,12 @@ def validate_arguments(args: argparse.Namespace) -> bool:
 
     return True
 
-"""
-Finds all files in the specified directory and returns it as a list of files
-"""
+# Finds all files in the specified directory and returns it as a list of files
 def find_files(directory: str) -> list[str]:
     files = []
     dir_path = Path(directory)
 
-    for file_path in dir_path:
+    for file_path in dir_path.iterdir():
         if file_path.is_file():
             files.append(str(file_path))
 

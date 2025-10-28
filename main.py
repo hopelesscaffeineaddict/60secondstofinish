@@ -32,6 +32,7 @@ def main():
         ctx = mp.get_context("forkserver")
 
         # gonna create basic mutator just to test first
+        sample_input = b"test input"
         mutator = Mutator(sample_input, ctx)
 
         # iterate over all binaries in the binary folder
