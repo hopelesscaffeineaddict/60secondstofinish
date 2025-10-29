@@ -8,8 +8,7 @@ class Mutator(threading.Thread):
     known_ints = {
         "CHAR_MAX": 255,
         "INT_MAX": 2147483647,
-        "UINT_MAX": 4294967295,
-        "LLONG_MAX": 9223372036854775807
+        "UINT_MAX": 4294967295
     }
 
     def __init__(self, example_input, input_queue, stop_event, binary_name, max_queue_size=200):
@@ -55,6 +54,8 @@ class Mutator(threading.Thread):
     def mutate(self):
         strategy = random.choice(['delete_rand_char',
                                 'insert_rand_char',
+                                # 'insert_rand_large_char',
+                                # 'insert_known_int',
                                 'bit_flip_not',
                                 'bit_flip_rand',
                                 'splice_bits'])
@@ -63,6 +64,10 @@ class Mutator(threading.Thread):
             mutated_str = self.delete_rand_char(self.input)
         elif strategy == 'insert_rand_char':
             mutated_str = self.insert_rand_char(self.input)
+        # elif strategy == 'insert_rand_large_char':
+        #     mutated_str = self.insert_rand_large_char(self.input)
+        # elif strategy == 'insert_known_int':
+        #     mutated_str = self.insert_known_int(self.input)
         elif strategy == 'bit_flip_not':
             mutated_str = self.bit_flip_not(self.input)
         elif strategy == 'bit_flip_rand':
@@ -72,19 +77,32 @@ class Mutator(threading.Thread):
 
         return mutated_str
 
-    """Delete a random character from input"""
+    """Delete a random characters from input"""
     def delete_rand_char(self, input: bytes) -> bytes:
         if not input:
             return input
-        pos = random.randrange(len(input))
-        return input[:pos] + input[pos + 1:]
+        pos = random.randrange(len(input) - 1)
+        end = random.randrange(pos + 1, len(input))
+        return input[:pos] + input[end:]
 
-    """Insert a random character into input"""
+    """Insert a random characters into input"""
     def insert_rand_char(self, input: bytes) -> bytes:
         pos = random.randrange(len(input) + 1)
         random_byte = os.urandom(1)
         return input[:pos] + random_byte + input[pos:]
+    
+    """Insert large number of characters into input"""
+    def insert_rand_large_char(self, input: bytes) -> bytes:
+        pos = random.randrange(len(input) + 1)
+        random_byte = os.urandom(10000)
+        return input[:pos] + random_byte + input[pos:]
 
+    """Insert a known int into input"""
+    def insert_known_int(self, input: bytes) -> bytes:
+        num = random.choice(list(self.known_ints.values()))
+        pos = random.randrange(len(input) + 1)
+        return input[:pos] + bytes(num) + input[pos:]
+    
     """Twos complement bit flip of input"""
     def bit_flip_not(self, input: bytes) -> bytes:
         if not input:
@@ -101,7 +119,7 @@ class Mutator(threading.Thread):
         bit_pos = random.randrange(8)
         new_byte = input[pos] ^ (1 << bit_pos)
         return input[:pos] + bytes([new_byte]) + input[pos + 1:]
-
+    
     """Splice random size of bytes from input at a random position"""
     def splice_bits(self, input: bytes) -> bytes:
         if len(input) < 2:
