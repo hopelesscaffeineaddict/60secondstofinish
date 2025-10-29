@@ -1,9 +1,11 @@
 import json
 import io
+import queue
+import time
 import random
 
 from .base import BaseMutator
-from models import FormatType
+from format import FormatType
 
 # json-specific mutator strategies
 class JSONMutator(BaseMutator):
@@ -46,8 +48,8 @@ class JSONMutator(BaseMutator):
         elif isinstance(data, list) and data:
             idx = random.randrange(len(data))
             data[idx] = self._mutate_value(data[idx])
-        elif isinstance(data, str):
-            return self.bit_flip_rand(data.encode('utf-8')).decode('utf-8', errors='ignore')
+        # elif isinstance(data, str):
+        #     return self.bit_flip_rand(data.encode('utf-8')).decode('utf-8', errors='ignore')
         elif isinstance(data, (int, float)):
             choice = random.random()
             if choice < 0.5:

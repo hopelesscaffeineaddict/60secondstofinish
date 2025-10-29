@@ -14,8 +14,8 @@ class GenericMutator(threading.Thread):
         "INT_MAX": 2147483647,
         "UINT_MAX": 4294967295,
         "INT_MAX_+1": 2147483648,
-        "LLONG_MAX": 9223372036854775807
-        "UINT_MAX_+1": 429496726,
+        "LLONG_MAX": 9223372036854775807,
+        "UINT_MAX_+1": 429496726
     }
 
     def __init__(self, format_type, input, input_queue, stop_event, binary_name, max_queue_size=200):

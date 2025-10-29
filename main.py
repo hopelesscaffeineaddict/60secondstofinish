@@ -7,7 +7,11 @@ import time
 from format import get_format_from_bytes, FormatType
 from inputs import parse_arguments, validate_arguments, match_binaries_to_inputs
 
-from mutator import BaseMutator, JSONMutator
+from mutate.base import BaseMutator
+from mutate.json_mutator import JSONMutator
+from mutate.csv_mutator import CSVMutator
+from mutate.mutator import GenericMutator
+
 from runner import Runner
 from crashes import CrashHandler
 
@@ -33,18 +37,22 @@ def binary_process(binary_path, input_path, fuzz_time = 60):
 
     mutator = None
     max_queue_size = 200
+
+    # if isinstance(mutator, CSVMutator):
+    #     mutator.parse_csv_structure()
+
     if input_format == FormatType.JSON:
         print(f"[{binary_name}] Detected JSON format. Using JSONMutator.")
         mutator = JSONMutator(input_path, input_queue, stop_event, binary_name, max_queue_size)
     elif input_format == FormatType.CSV:
         print(f"[{binary_name}] Detected CSV format. Using CSVMutator.")
-        mutator = CSVMutator(input_path, input_queue, stop_event_binary_name, max_queue_size)
+        mutator = CSVMutator(input_path, input_queue, stop_event, binary_name, max_queue_size)
     else:
         # fallback to generic mutator
         print(f"[{binary_name}] Using generic BaseMutator for format: {input_format.name}")
         mutator = BaseMutator(input_path, input_queue, stop_event, binary_name, max_queue_size)
 
-    runner = Runner(binary_path, input_queue, crash_handler, stop_event)
+    runner = Runner(binary_path, input_queue, crash_handler, stop_event, mutator)
 
     print(f"Starting fuzzing for {binary_path}")
     crash_handler.start()
