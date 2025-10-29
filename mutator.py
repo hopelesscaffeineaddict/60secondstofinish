@@ -134,6 +134,7 @@ class JSONMutator(BaseMutator):
             self._add_key_value,
             self._remove_key_value,
             self._mutate_array_structure,
+            self._add_nested_json,
         ])
 
         try:
@@ -207,4 +208,23 @@ class JSONMutator(BaseMutator):
             else: 
                 new_element = random.choice(["new_string", 999, False, {}])
                 data.append(new_element)
+        return data
+    
+    def _add_nested_json(self, data):
+        """Adds a new, nested JSON object into a dictionary or a list."""
+        if not isinstance(data, (dict, list)):
+            return data
+
+        nested_obj = {
+            "fuzzer_nested_key": ''.join(random.choice("abcdefghijklmnopqrstuvwxyz") for _ in range(8)),
+            "fuzzer_nested_val": random.choice(list(self.known_ints.values())),
+            "fuzzer_nested_list": [None, True, 1337]
+        }
+
+        if isinstance(data, dict):
+            new_key = "fuzzer_nested_obj_" + str(random.randint(1000, 9999))
+            data[new_key] = nested_obj
+        elif isinstance(data, list):
+            data.append(nested_obj)
+            
         return data
