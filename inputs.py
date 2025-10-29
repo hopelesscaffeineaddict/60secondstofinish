@@ -111,14 +111,15 @@ def match_binaries_to_inputs(binary_directory: str, input_directory:str) -> dict
         matching_input = None
 
         # check if binary is executable. if not, make it executable
-        if not os.access(binary_name, os.X_OK):
+        if not os.access(binary_file, os.X_OK):
             try:
-                st = os.stat(binary)
-                os.chmod(binary, st.st_mode | 0o111)
+                st = os.stat(binary_file)
+                os.chmod(binary_file, st.st_mode | 0o111)
                 print(f'Success: Made binary {binary_name} executable.')
             except Exception as e:
                 print(f'Error: Failed to make binary {binary_name} executable: {e}. Skipping.')
                 continue
+
 
         # Try exact match (eg. csv1 -> csv1.txt)
         for input_file in input_files:

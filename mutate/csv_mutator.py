@@ -1,9 +1,11 @@
 import csv
 import io
 import random
+import queue
+import time
 
 from .base import BaseMutator
-from models import FormatType
+from format import FormatType
 
 class CSVMutator(BaseMutator):
     def __init__(self, input_file, input_queue, stop_event, binary_name, max_queue_size):
@@ -17,38 +19,73 @@ class CSVMutator(BaseMutator):
         self.quote_char = '"'
         self.original_content = None
 
+        self.parse_csv_structure()
+
     # chainable mutation function that applies n_mutations sequentially, building on the current state
     # each mutation is able to affect all rows/fields 
     def mutate(self, n_mutations=10):
-        current_csv = self.parsed_csv.copy()
+        # only mutate data rows 
+        current_data = self.data_rows.copy()
+
         for _ in range(n_mutations):
             mutation_type = self.random.choice(["field_mutation", "row_mutation"])
             if mutation_type == "field_mutation":
-                current_csv = self._mutate_all_fields(current_csv)
+                current_data = self.mutate_all_fields(current_data)
             elif mutation_type == "row_mutation":
-                current_csv = self._mutate_all_rows(current_csv)
-        return self._serialize_csv(current_csv)
+                current_data = self.mutate_all_rows(current_data)
+        
+        if self.header:
+            full_csv = [self.header] + current_data
+        else:
+            full_csv = current_data
+        
+        # print(f'[DEBUG] current csv state (after each mutation): {current_csv}')
+        return self.serialise_csv(full_csv)
 
     # TODO: add a check for whether csv data is numeric and update __init__ accordingly
     # parse CSV structure and detect the delimiter, quotechar, header and header protection
     def parse_csv_structure(self):
-        try:
-            with open(self.input_file, "r", encoding="utf-8") as csv_file:
-                self.original_content = csv_file.read()
-            dialect = csv.Sniffer().sniff(self.original_content.split("\n")[0])
-            self.delimiter = dialect.delimiter
-            self.quote_char = dialect.quotechar
-        except Exception:
+        # first check if self.input is a file path or file content 
+        if isinstance(self.input, str):
+            print(f'[DEBUG] input is a file path')
+            try:
+                with open(self.input, "r", encoding="utf-8") as csv_file:
+                    self.original_content = csv_file.read()
+                dialect = csv.Sniffer().sniff(self.original_content.split("\n")[0])
+                self.delimiter = dialect.delimiter
+                self.quote_char = dialect.quotechar
+            except Exception:
+                self.delimiter = ','
+                self.quote_char = '"'
+        # else decode file content 
+        elif isinstance(self.input, bytes):
+            print(f'[DEBUG] input is file content')
+            try:
+                self.original_content = self.input.decode('utf-8')
+                dialect = csv.Sniffer().sniff(self.original_content.split("\n")[0])
+                self.delimiter = dialect.delimiter
+                self.quote_char = dialect.quotechar
+            except Exception:
+                self.delimiter = ','
+                self.quote_char = '"'
+        else:
+            self.original_content = ""
             self.delimiter = ','
             self.quote_char = '"'
 
+        print(f'[DEBUG] input is: {self.input}')
+        # check if og content is none before using, return error message if so
+        if self.original_content is None:
+            print(f'[ERROR] original_content from csv is None. Returning.')
+            return
         # parse rows
         reader = csv.reader(self.original_content.splitlines(), delimiter=self.delimiter, quotechar=self.quote_char)
         self.parsed_csv = list(reader)
 
         # check if there's a header and if header is protected
         if self.parsed_csv:
-            has_header = csv.Sniffer.has_header(parsed_csv)
+            has_header = csv.Sniffer().has_header(self.original_content)
+            print(f'[DEBUG] csv has header value: {self.header}')
 
             if has_header:
                 self.header = self.parsed_csv[0]
@@ -58,13 +95,16 @@ class CSVMutator(BaseMutator):
                     self.protected_header = True 
             else:
                 self.data_rows = self.parsed_csv
+            
+            print(f'[DEBUG] data rows in csv parsed as: {self.data_rows}')
 
     # converts mutated input back into a CSV string
     def serialise_csv(self, csv_data):
         output = io.StringIO()
         writer = csv.writer(output, delimiter=self.delimiter, quotechar=self.quote_char)
         writer.writerows(csv_data)
-        return output.getvalue()
+        # return output.getvalue()
+        return output.getvalue().encode('utf-8')
 
 
     # mutate all fields in csv_data
@@ -82,7 +122,7 @@ class CSVMutator(BaseMutator):
     def mutate_all_rows(self, csv_data):
         mutated = []
         for row in csv_data:
-            # Optionally duplicate, delete, or leave row
+            # optionally duplicate, delete, or leave row
             action = self.random.choice(["duplicate", "keep", "delete"])
             if action == "duplicate":
                 mutated.append(row)
@@ -92,7 +132,7 @@ class CSVMutator(BaseMutator):
 
     # randomly mutates rows (insert/delete/duplicate)
     def mutate_rows(self):
-        row_mutation_strategies = self.random.choice(
+        strategy = self.random.choice(
             ["insert_row",
             "duplicate_row", 
             "delete_row"]
@@ -105,16 +145,8 @@ class CSVMutator(BaseMutator):
         elif strategy == 'delete_row':
             return self.delete_row()
 
-    # randomly mutates fields (insert/duplicate/delete/replace content)
-    def mutate_field_value(self):
-        if not self.data_rows:
-            return self.original_content
-            
-        # Select a random row and column
-        row_index = self.random.randint(0, len(self.data_rows) - 1)
-        col_index = self.random.randint(0, len(self.data_rows[row_index]) - 1)
-        
-        # Choose a mutation strategy
+    # randomly chooses a mutation strategy for field (insert/duplicate/delete/replace content in field)
+    def mutate_field_value(self, field_value):
         strategy = self.random.choice([
             "insert_character",
             "duplicate_content",
@@ -124,39 +156,26 @@ class CSVMutator(BaseMutator):
             # "inject_whitespaces_in_field"
         ])
         
-        # Get the original field value
-        original_value = self.data_rows[row_index][col_index]
-        
-        # Apply the selected mutation strategy
         if strategy == 'insert_character':
-            mutated_value = self.insert_characters(original_value)
+            mutated_value = self.insert_characters(field_value)
         elif strategy == 'duplicate_content':
-            mutated_value = self.duplicate_content(original_value)
+            mutated_value = self.duplicate_content(field_value)
         # elif strategy == 'delete_character':
-        #     mutated_value = self.delete_character_from_field(original_value)
+        #     mutated_value = self.delete_character_from_field(field_value)
         # elif strategy == 'replace_character_with_special':
-        #     mutated_value = self.replace_character_with_special(original_value)
+        #     mutated_value = self.replace_character_with_special(field_value)
         # elif strategy == 'insert_numeric_edge_cases':
-        #     mutated_value = self.insert_numeric_edge_cases(original_value)
-        # elif strategy == 'inject_whitespaces_in_field':
-        #     mutated_value = self.inject_whitespaces_in_field(original_value)
-
-        # Create a copy of the data rows and update the selected field
-        mutated_rows = self.data_rows.copy()
-        mutated_rows[row_index] = mutated_rows[row_index].copy()
-        mutated_rows[row_index][col_index] = mutated_value
-        
-        # Reconstruct the full CSV
-        if self.header:
-            full_csv = [self.header] + mutated_rows
+        #     mutated_value = self.insert_numeric_edge_cases(field_value)
+        # elif strategy == 'inject_whitespaces_in_field":
+        #     mutated_value = self.inject_whitespaces_in_field(field_value)
         else:
-            full_csv = mutated_rows
+            mutated_value = field_value
             
-        return self.serialize_csv(full_csv)
+        return mutated_value
     
     # insert a random number of (safe) characters into a field 
     def insert_characters(self, field_value):
-        n_insert = self.random.randint(10, 200)
+        n_insert = self.random.randint(2, 20)
         extra_chars = ''.join(self.random.choices('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ', k=n_insert))
         return field_value + extra_chars
 
@@ -203,7 +222,7 @@ class CSVMutator(BaseMutator):
         else:
             full_csv = mutated_rows
             
-        return self.serialize_csv(full_csv)
+        return self.serialise_csv(full_csv)
 
     # duplicate a random row 
     def duplicate_row(self):
@@ -241,7 +260,7 @@ class CSVMutator(BaseMutator):
         else:
             full_csv = mutated_rows
             
-        return self.serialize_csv(full_csv)
+        return self.serialise_csv(full_csv)
 
         
 

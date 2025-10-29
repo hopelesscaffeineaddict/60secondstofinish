@@ -8,7 +8,7 @@ import signal
 from models import ExecutionResult, CrashType
 
 class Runner(threading.Thread):
-    def __init__(self, binary_path, input_queue, crash_handler, stop_event, timeout=2.0):
+    def __init__(self, binary_path, input_queue, crash_handler, stop_event, mutator, timeout=2.0):
         super().__init__(daemon=True)
         self.binary_path = binary_path
         self.input_queue = input_queue
@@ -16,6 +16,7 @@ class Runner(threading.Thread):
         self.stop_event = stop_event
         self.timeout = timeout
         self.stats = {"total_executions": 0}
+        self.mutator = mutator
 
     def run(self):
         while not self.stop_event.is_set():
@@ -27,6 +28,9 @@ class Runner(threading.Thread):
 
             self.stats["total_executions"] += 1
             result = self.execute_input(input_data)
+
+            # log execution results
+            self.mutator.log_execution(input_data, result)
 
             if result.crashed:
                 # add the new crash results to the crash handler queue
