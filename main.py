@@ -18,7 +18,7 @@ OUTPUT_DIR = "fuzzer_output"
 
 runners = []
 
-def binary_process(binary_path, example_input, fuzz_time = 60):
+def binary_process(binary_path, input_path, fuzz_time = 60):
     # event to signal runner process to stop
     stop_event = threading.Event()
     # condition the crash handler waits on (when waiting for a crash to analayse)
@@ -29,16 +29,20 @@ def binary_process(binary_path, example_input, fuzz_time = 60):
     # create mutator, crash handler and runner threads
     binary_name = os.path.basename(binary_path)
     crash_handler = CrashHandler(binary_path, crash_condition, stop_event)
-    input_format = get_format_from_bytes(example_input)
+    input_format = get_format_from_bytes(input_path)
 
     mutator = None
+    max_queue_size = 200
     if input_format == FormatType.JSON:
         print(f"[{binary_name}] Detected JSON format. Using JSONMutator.")
-        mutator = JSONMutator(example_input, input_queue, stop_event, binary_name)
+        mutator = JSONMutator(input_path, input_queue, stop_event, binary_name, max_queue_size)
+    elif input_format == FormatType.CSV:
+        print(f"[{binary_name}] Detected CSV format. Using CSVMutator.")
+        mutator = CSVMutator(input_path, input_queue, stop_event_binary_name, max_queue_size)
     else:
-        # Fallback to the generic mutator for CSV, Plaintext, etc.
+        # fallback to generic mutator
         print(f"[{binary_name}] Using generic BaseMutator for format: {input_format.name}")
-        mutator = BaseMutator(example_input, input_queue, stop_event, binary_name)
+        mutator = BaseMutator(input_path, input_queue, stop_event, binary_name, max_queue_size)
 
     runner = Runner(binary_path, input_queue, crash_handler, stop_event)
 
