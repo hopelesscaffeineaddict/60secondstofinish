@@ -8,7 +8,9 @@ class Mutator(threading.Thread):
     known_ints = {
         "CHAR_MAX": 255,
         "INT_MAX": 2147483647,
-        "UINT_MAX": 4294967295
+        "INT_MAX_+1": 2147483648,
+        "UINT_MAX": 4294967295,
+        "UINT_MAX_+1": 429496726,
     }
 
     def __init__(self, example_input, input_queue, stop_event, binary_name, max_queue_size=200):
@@ -55,7 +57,7 @@ class Mutator(threading.Thread):
         strategy = random.choice(['delete_rand_char',
                                 'insert_rand_char',
                                 # 'insert_rand_large_char',
-                                # 'insert_known_int',
+                                'insert_known_int',
                                 'bit_flip_not',
                                 'bit_flip_rand',
                                 'splice_bits'])
@@ -66,8 +68,8 @@ class Mutator(threading.Thread):
             mutated_str = self.insert_rand_char(self.input)
         # elif strategy == 'insert_rand_large_char':
         #     mutated_str = self.insert_rand_large_char(self.input)
-        # elif strategy == 'insert_known_int':
-        #     mutated_str = self.insert_known_int(self.input)
+        elif strategy == 'insert_known_int':
+            mutated_str = self.insert_known_int(self.input)
         elif strategy == 'bit_flip_not':
             mutated_str = self.bit_flip_not(self.input)
         elif strategy == 'bit_flip_rand':
@@ -101,7 +103,8 @@ class Mutator(threading.Thread):
     def insert_known_int(self, input: bytes) -> bytes:
         num = random.choice(list(self.known_ints.values()))
         pos = random.randrange(len(input) + 1)
-        return input[:pos] + bytes(num) + input[pos:]
+        num_bytes = num.to_bytes(4, 'big')
+        return input[:pos] + num_bytes + input[pos:]
     
     """Twos complement bit flip of input"""
     def bit_flip_not(self, input: bytes) -> bytes:
