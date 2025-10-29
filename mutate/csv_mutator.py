@@ -66,18 +66,19 @@ class CSVMutator(BaseMutator):
         writer.writerows(csv_data)
         return output.getvalue()
 
+
+    # mutate all fields in csv_data
     def mutate_all_fields(self, csv_data):
         mutated = []
         for row in csv_data:
             mutated_row = []
             for field in row:
-                # Insert random number of chars for each field
-                n_chars = self.random.randint(1, 5)
-                mutated_field = field + ''.join(self.random.choices("ABCDEFGHIJKLMNOPQRSTUVWXYZ", k=n_chars))
+                mutated_field = self.mutate_field_value(field)
                 mutated_row.append(mutated_field)
             mutated.append(mutated_row)
         return mutated
 
+    # mutate all rows in csv_data
     def mutate_all_rows(self, csv_data):
         mutated = []
         for row in csv_data:
@@ -104,24 +105,72 @@ class CSVMutator(BaseMutator):
         elif strategy == 'delete_row':
             return self.delete_row()
 
-    # randomly mutates fields (insert_character/)
+    # randomly mutates fields (insert/duplicate/delete/replace content)
     def mutate_field_value(self):
+        if not self.data_rows:
+            return self.original_content
+            
+        # Select a random row and column
+        row_index = self.random.randint(0, len(self.data_rows) - 1)
+        col_index = self.random.randint(0, len(self.data_rows[row_index]) - 1)
+        
+        # Choose a mutation strategy
+        strategy = self.random.choice([
+            "insert_character",
+            "duplicate_content",
+            # "delete_character",
+            # "replace_character_with_special",
+            # "insert_numeric_edge_cases",
+            # "inject_whitespaces_in_field"
+        ])
+        
+        # Get the original field value
+        original_value = self.data_rows[row_index][col_index]
+        
+        # Apply the selected mutation strategy
+        if strategy == 'insert_character':
+            mutated_value = self.insert_characters(original_value)
+        elif strategy == 'duplicate_content':
+            mutated_value = self.duplicate_content(original_value)
+        # elif strategy == 'delete_character':
+        #     mutated_value = self.delete_character_from_field(original_value)
+        # elif strategy == 'replace_character_with_special':
+        #     mutated_value = self.replace_character_with_special(original_value)
+        # elif strategy == 'insert_numeric_edge_cases':
+        #     mutated_value = self.insert_numeric_edge_cases(original_value)
+        # elif strategy == 'inject_whitespaces_in_field':
+        #     mutated_value = self.inject_whitespaces_in_field(original_value)
 
-
+        # Create a copy of the data rows and update the selected field
+        mutated_rows = self.data_rows.copy()
+        mutated_rows[row_index] = mutated_rows[row_index].copy()
+        mutated_rows[row_index][col_index] = mutated_value
+        
+        # Reconstruct the full CSV
+        if self.header:
+            full_csv = [self.header] + mutated_rows
+        else:
+            full_csv = mutated_rows
+            
+        return self.serialize_csv(full_csv)
+    
     # insert a random number of (safe) characters into a field 
-    def insert_character_in_field(self, field_value):
+    def insert_characters(self, field_value):
         n_insert = self.random.randint(10, 200)
         extra_chars = ''.join(self.random.choices('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ', k=n_insert))
         return field_value + extra_chars
 
+    def duplicate_content(self, field_value):
+        return field_value + field_value
+
+    # TODO: finish function that randomly deletes n characters from field (ensure that remaining characters > 0)
+    # def delete_characters(self, field_value):
+
     # TODO: finish function that replaces field value with a random combination of escape sequence/encodings
-    # def insert_special_characters_in_field(self, field_value)
+    # def replace_character_with_special(self, field_value)
 
     # TODO: finish function that replaces field value with a random numeric edge case from a set of edge cases
     # def insert_numeric_edge_cases(self, field_value):
-
-    # TODO: need i say more lol
-    # def duplicate_field_value(self, field_value):
 
     # TODO: inject whitespaces/tabs into field (start/end/both)
     # def inject_whitespaces_in_field(self, field_value):
