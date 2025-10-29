@@ -20,26 +20,32 @@ class MagicBytes:
     ELF = b"\x7FELF"
     PDF = b"%PDF"
 
-# Determines the format type corresponding to the provided input (first 2kb of file)
 def format_type(example_input_file: str) -> FormatType:
     try:
         with open(example_input_file, "rb") as input_file:
-            input = input_file.read(2048)
+            input_bytes = input_file.read(2048)
     except IOError as e:
         print(f"[!] Error reading file {example_input_file}: {e}")
         return FormatType.UNKNOWN
 
-    if is_json(input):
+    return get_format_from_bytes(input_bytes)
+
+# Determines the format type from a byte string
+def get_format_from_bytes(input_data: bytes) -> FormatType:
+    
+    input_slice = input_data[:2048]
+
+    if is_json(input_slice):
         return FormatType.JSON
-    elif is_csv(input):
+    elif is_csv(input_slice):
         return FormatType.CSV
-    elif is_xml(input):
+    elif is_xml(input_slice):
         return FormatType.XML
-    elif is_jpeg(input):
+    elif is_jpeg(input_slice):
         return FormatType.JPEG
-    elif is_pdf(input):
+    elif is_pdf(input_slice):
         return FormatType.PDF
-    elif is_elf(input):
+    elif is_elf(input_slice):
         return FormatType.ELF
 
     return FormatType.PLAINTEXT
@@ -55,12 +61,12 @@ def is_json(input: bytes) -> bool:
 # Checks if the provided byte input is a CSV format
 def is_csv(input: bytes) -> bool:
     try:
-        input = input.decode('utf-8')
+        input_str = input.decode('utf-8')
 
-        if not input.strip():
+        if not input_str.strip():
             return False
         # Check if it resembles CSV file
-        csv.Sniffer().sniff(input)
+        csv.Sniffer().sniff(input_str)
         return True
     except (csv.Error, UnicodeDecodeError):
         return False

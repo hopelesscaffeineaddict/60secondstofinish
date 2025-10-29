@@ -4,12 +4,10 @@ import sys
 import multiprocessing as mp
 import queue
 import time
-from format import format_type, FormatType
-from mutator import Mutator
-from runner import Runner
+from format import get_format_from_bytes, FormatType
 from inputs import parse_arguments, validate_arguments, match_binaries_to_inputs
 
-from mutator import Mutator
+from mutator import BaseMutator, JSONMutator
 from runner import Runner
 from crashes import CrashHandler
 
@@ -20,7 +18,7 @@ OUTPUT_DIR = "fuzzer_output"
 
 runners = []
 
-def binary_process(binary_path, example_input, fuzz_time = 60):
+def binary_process(binary_path, input_path, fuzz_time = 60):
     # event to signal runner process to stop
     stop_event = threading.Event()
     # condition the crash handler waits on (when waiting for a crash to analayse)
@@ -31,7 +29,21 @@ def binary_process(binary_path, example_input, fuzz_time = 60):
     # create mutator, crash handler and runner threads
     binary_name = os.path.basename(binary_path)
     crash_handler = CrashHandler(binary_path, crash_condition, stop_event)
-    mutator = Mutator(example_input, input_queue, stop_event, binary_name)
+    input_format = get_format_from_bytes(input_path)
+
+    mutator = None
+    max_queue_size = 200
+    if input_format == FormatType.JSON:
+        print(f"[{binary_name}] Detected JSON format. Using JSONMutator.")
+        mutator = JSONMutator(input_path, input_queue, stop_event, binary_name, max_queue_size)
+    elif input_format == FormatType.CSV:
+        print(f"[{binary_name}] Detected CSV format. Using CSVMutator.")
+        mutator = CSVMutator(input_path, input_queue, stop_event_binary_name, max_queue_size)
+    else:
+        # fallback to generic mutator
+        print(f"[{binary_name}] Using generic BaseMutator for format: {input_format.name}")
+        mutator = BaseMutator(input_path, input_queue, stop_event, binary_name, max_queue_size)
+
     runner = Runner(binary_path, input_queue, crash_handler, stop_event)
 
     print(f"Starting fuzzing for {binary_path}")
@@ -68,7 +80,7 @@ def binary_process(binary_path, example_input, fuzz_time = 60):
 
     # calculate executions per second to assess program speed
     executions_per_second = 0
-    if total_time == 0:
+    if total_time > 0:
         executions_per_second = total_executions / total_time
 
     # per-binary fuzzer statistics in terminal
@@ -89,7 +101,11 @@ def main():
             sys.exit(1)
 
         matches = match_binaries_to_inputs(args.binary, args.input)
-        ctx = mp.get_context("forkserver")
+        if not matches:
+            print("No binary-to-input matches found. Exiting.")
+            sys.exit(1)
+            
+        ctx = mp.get_context("spawn")
 
         # iterate over all binaries in the binary folder
         for binary, input in matches.items():
