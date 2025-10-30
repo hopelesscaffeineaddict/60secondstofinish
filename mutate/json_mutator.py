@@ -1,3 +1,5 @@
+# In mutate/json_mutator.py, fix the JSONMutator class
+
 import json
 import io
 import queue
@@ -12,16 +14,30 @@ class JSONMutator(BaseMutator):
     
     def __init__(self, example_input, input_queue, stop_event, binary_name, max_queue_size=200):
         super().__init__(example_input, input_queue, stop_event, binary_name, max_queue_size)
+        
+        # known ints dict
+        self.known_ints = {
+            "zero": 0,
+            "one": 1,
+            "negative_one": -1,
+            "small_positive": 42,
+            "small_negative": -42,
+            "large_positive": 2147483647,
+            "large_negative": -2147483648,
+            "max_int": 2**31 - 1,
+            "min_int": -2**31,
+        }
 
-    def parse_json(self, example_input):
-        json_dict = json.loads()
     def mutate(self):
-
         try:
-            content = json.loads(self.input.decode('utf-8'))
+            # handle both string and bytes input
+            if isinstance(self.input, bytes):
+                content = json.loads(self.input.decode('utf-8'))
+            else:
+                content = json.loads(self.input)
         except (json.JSONDecodeError, UnicodeDecodeError):
-            # Input is not valid JSON, fall back to base (dumb) mutator
-            return super().mutate()
+            # if input not valid JSON, fallback to base mutator (ie. simple string mutation)
+            return self._fallback_mutation()
 
         strategy = random.choice([
             self._mutate_value,
@@ -34,12 +50,25 @@ class JSONMutator(BaseMutator):
 
         try:
             mutated_content = strategy(content)
-            # Use separators=(',', ':') for compact output without extra whitespace
+            # always return bytes 
             return json.dumps(mutated_content, separators=(',', ':')).encode('utf-8')
         except Exception:
-            # If a mutation fails unexpectedly, fall back to a base mutation
-            return super().mutate()
+            # fallback to base mutation if mutation fails
+            return self._fallback_mutation()
+    
+    # fallback mutation 
+    def _fallback_mutation(self):
+        """Simple fallback mutation when JSON parsing fails"""
+        if isinstance(self.input, bytes):
+            input_str = self.input.decode('utf-8', errors='ignore')
+        else:
+            input_str = str(self.input)
         
+        # Add random characters
+        n_insert = random.randint(10, 200)
+        extra_chars = ''.join(random.choices('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ', k=n_insert))
+        return input_str + extra_chars
+    
     def _mutate_value(self, data):
         """Recursively traverses a JSON object to mutate a single value."""
         if isinstance(data, dict) and data:
