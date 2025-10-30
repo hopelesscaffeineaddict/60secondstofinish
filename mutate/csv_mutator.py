@@ -10,6 +10,7 @@ from format import FormatType
 class CSVMutator(BaseMutator):
     def __init__(self, input_file, input_queue, stop_event, binary_name, max_queue_size):
         super().__init__(input_file, input_queue, stop_event, binary_name, max_queue_size)
+        print(input_file)
 
         self.parsed_csv = []
         self.data_rows = []
@@ -39,8 +40,10 @@ class CSVMutator(BaseMutator):
         else:
             full_csv = current_data
         
-        # print(f'[DEBUG] current csv state (after each mutation): {current_csv}')
-        return self.serialise_csv(full_csv)
+        
+        serialised = self.serialise_csv(full_csv)
+        # print(serialised)
+        return serialised
 
     # TODO: add a check for whether csv data is numeric and update __init__ accordingly
     # parse CSV structure and detect the delimiter, quotechar, header and header protection
@@ -175,7 +178,7 @@ class CSVMutator(BaseMutator):
     
     # insert a random number of (safe) characters into a field 
     def insert_characters(self, field_value):
-        n_insert = self.random.randint(2, 20)
+        n_insert = self.random.randint(2, 100)
         extra_chars = ''.join(self.random.choices('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ', k=n_insert))
         return field_value + extra_chars
 
