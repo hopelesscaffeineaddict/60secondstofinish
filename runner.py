@@ -98,7 +98,7 @@ class Runner(threading.Thread):
         # signal based crash detection
         if return_code < 0:
             signal_num = abs(return_code)
-            crash_type = self._signal_to_crash_type(signal_num)
+            crash_type = self.signal_to_crash_type(signal_num)
             if crash_type:
                 return crash_type
 

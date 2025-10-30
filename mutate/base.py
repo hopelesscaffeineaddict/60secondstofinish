@@ -17,6 +17,7 @@ class BaseMutator(threading.Thread):
         self.random = random.Random()
         self.binary_name = binary_name
         self.mutations_done = 0
+        self.executions_done = 0
         # self.format_type = format_type 
         self.stop_event = stop_event
         self.max_queue_size = 200
@@ -39,7 +40,7 @@ class BaseMutator(threading.Thread):
         self.log_file.write(f"example_input: {input}".encode())
 
         # setup execution log file 
-        output_path = os.path.join(output_dir, f"{binary_name}_output.txt")
+        output_path = os.path.join(output_dir, f"{binary_name}_execution_log.txt")
         print(f'[DEBUG]: exec log path: {output_path}')
         self.exec_log_file = open(output_path, "w")
         self.exec_log_file.write(f"Execution log for {binary_name}\n")
@@ -87,7 +88,8 @@ class BaseMutator(threading.Thread):
     # log stderr/stdout output
     def log_execution(self, input_data, result):
         if self.exec_log_file and not self.exec_log_file.closed:
-                self.exec_log_file.write(f"Execution #{self.mutations_done}\n")
+                self.executions_done += 1
+                self.exec_log_file.write(f"Execution #{self.executions_done}\n")
                 self.exec_log_file.write(f"Input: {input_data[:100]}{'...' if len(input_data) > 100 else ''}\n")
                 self.exec_log_file.write(f"Return Code: {result.return_code}\n")
 
@@ -95,10 +97,12 @@ class BaseMutator(threading.Thread):
                     self.exec_log_file.write(f"Crash Type: {result.crash_type.value if result.crash_type else 'Unknown'}\n")
                 
                 self.exec_log_file.write("\n--- STDOUT ---\n")
-                self.exec_log_file.write(result.stdout.decode('utf-8', errors='ignore'))
+                stdout_text = result.stdout.decode('utf-8', errors='ignore')
+                self.exec_log_file.write(stdout_text)
                 
                 self.exec_log_file.write("\n--- STDERR ---\n")
-                self.exec_log_file.write(result.stderr.decode('utf-8', errors='ignore'))
+                stderr_text = result.stderr.decode('utf-8', errors='ignore')
+                self.exec_log_file.write(stderr_text)
                 
                 self.exec_log_file.write("\n" + "="*50 + "\n\n")
                 self.exec_log_file.flush()

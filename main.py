@@ -61,7 +61,8 @@ def binary_process(binary_path, input_path, fuzz_time = 60):
 
     start_time = time.time()
     try:
-        while time.time() - start_time < fuzz_time:
+        # check for timeout or crash detection 
+        while time.time() - start_time < fuzz_time and not stop_event.is_set():
             time.sleep(1)
     except KeyboardInterrupt:
         print(f"Fuzzing interrupted by user for {binary_path}")

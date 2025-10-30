@@ -61,20 +61,21 @@ class CrashHandler(threading.Thread):
             # save crash
             self.save_crash(result, crash_input)
 
-            # TODO: may remove this after (only stopping after first crash for testing)
+            # stop fuzzing after first crash
+            self.stop_event.set()
             self.running = False
             break
 
     def save_crash(self, result, crash_input):
         os.makedirs(OUTPUT_DIR, exist_ok=True)
-        out_file = os.path.join(OUTPUT_DIR, f"bad_{self.binary}.txt")
+        out_file = os.path.join(OUTPUT_DIR, f"{self.binary}_crashinput.txt")
         with open(out_file, "ab") as f:
             f.write(crash_input)
 
         #  generate crash report
-        report_file = os.path.join(OUTPUT_DIR, f"bad_{self.binary_name}_report.txt")
+        report_file = os.path.join(OUTPUT_DIR, f"{self.binary}_crashreport.txt")
         with open(report_file, "w") as f:
-            f.write(f"Crash Report for {self.binary_name}\n")
+            f.write(f"Crash Report for {self.binary}\n")
             f.write(f"Crash Type: {result.crash_type.value if result.crash_type else 'Unknown'}\n")
             f.write(f"Return Code: {result.return_code}\n")
             f.write(f"Signal: {result.signal}\n")
@@ -91,9 +92,9 @@ class CrashHandler(threading.Thread):
             if len(crash_input) > 1024:
                 f.write(f"\n... ({len(crash_input) - 1024} more bytes)")
 
-        print(f"Crash found for {self.binary_name}! Type: {result.crash_type.value if result.crash_type else 'Unknown'}")
-        print(f"Saved crashing input to {out_file}")
-        print(f"Detailed report saved to {report_file}")
+        print(f"[SUCCESS] Crash found for {self.binary}! Type: {result.crash_type.value if result.crash_type else 'Unknown'}")
+        print(f"[CRASH INPUT SAVED] Saved crashing input to {out_file}")
+        print(f"[REPORT SAVED] Detailed report saved to {report_file}")
 
         stderr_preview = result.stderr.decode('utf-8', errors='ignore')[:200]
         if stderr_preview:

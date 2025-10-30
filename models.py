@@ -2,6 +2,7 @@ from enum import Enum
 from typing import Optional
 
 class CrashType(Enum):
+    STACKSMASH = "stack smashing"
     SEGFAULT = "segmentation_fault"
     BUFFER_OVERFLOW = "buffer_overflow"
     USE_AFTER_FREE = "use_after_free"
