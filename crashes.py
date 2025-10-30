@@ -68,7 +68,7 @@ class CrashHandler(threading.Thread):
 
     def save_crash(self, result, crash_input):
         os.makedirs(OUTPUT_DIR, exist_ok=True)
-        out_file = os.path.join(OUTPUT_DIR, f"{self.binary}_crashinput.txt")
+        out_file = os.path.join(OUTPUT_DIR, f"bad_{self.binary}.txt")
         with open(out_file, "ab") as f:
             f.write(crash_input)
 
