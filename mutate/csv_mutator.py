@@ -19,6 +19,7 @@ class CSVMutator(BaseMutator):
         self.delimiter = ','
         self.quote_char = '"'
         self.original_content = None
+        self.line_ending = '\n'   
 
         self.parse_csv_structure()
 
@@ -39,10 +40,8 @@ class CSVMutator(BaseMutator):
             full_csv = [self.header] + current_data
         else:
             full_csv = current_data
-        
-        
+
         serialised = self.serialise_csv(full_csv)
-        # print(serialised)
         return serialised
 
     # TODO: add a check for whether csv data is numeric and update __init__ accordingly
@@ -76,11 +75,20 @@ class CSVMutator(BaseMutator):
             self.delimiter = ','
             self.quote_char = '"'
 
+        # detect line ending style
+        if '\r\n' in self.original_content:
+            self.line_ending = '\r\n'
+        elif '\r' in self.original_content:
+            self.line_ending = '\r'
+        else:
+            self.line_ending = '\n'
+
         print(f'[DEBUG] input is: {self.input}')
         # check if og content is none before using, return error message if so
         if self.original_content is None:
             print(f'[ERROR] original_content from csv is None. Returning.')
             return
+            
         # parse rows
         reader = csv.reader(self.original_content.splitlines(), delimiter=self.delimiter, quotechar=self.quote_char)
         self.parsed_csv = list(reader)
@@ -88,14 +96,17 @@ class CSVMutator(BaseMutator):
         # check if there's a header and if header is protected
         if self.parsed_csv:
             has_header = csv.Sniffer().has_header(self.original_content)
-            print(f'[DEBUG] csv has header value: {self.header}')
 
             if has_header:
                 self.header = self.parsed_csv[0]
                 self.data_rows = self.parsed_csv[1:]
+                print(f'[DEBUG] csv has header value: {self.header}, header_value_type = {type(self.header[1])}')
+                print(f'[DEBUG] header value type: {type(self.header[0])}')
 
-                if "keep" in self.header or "intact" in self.header:
+                # check for header protection keywords
+                if any(keyword.lower() in [h.lower() for h in self.header] for keyword in ["keep", "intact"]):
                     self.protected_header = True 
+                    print(f'[DEBUG] Header protection enabled for: {self.header}')
             else:
                 self.data_rows = self.parsed_csv
             
@@ -104,11 +115,13 @@ class CSVMutator(BaseMutator):
     # converts mutated input back into a CSV string
     def serialise_csv(self, csv_data):
         output = io.StringIO()
-        writer = csv.writer(output, delimiter=self.delimiter, quotechar=self.quote_char)
+        
+        # use detected line ending
+        writer = csv.writer(output, delimiter=self.delimiter, quotechar=self.quote_char, lineterminator=self.line_ending)
         writer.writerows(csv_data)
-        # return output.getvalue()
+        
+        # return bytes
         return output.getvalue().encode('utf-8')
-
 
     # mutate all fields in csv_data
     def mutate_all_fields(self, csv_data):
@@ -159,17 +172,17 @@ class CSVMutator(BaseMutator):
             # "inject_whitespaces_in_field"
         ])
         
-        if strategy == 'insert_character':
+        if strategy == "insert_character":
             mutated_value = self.insert_characters(field_value)
-        elif strategy == 'duplicate_content':
+        elif strategy == "duplicate_content":
             mutated_value = self.duplicate_content(field_value)
-        # elif strategy == 'delete_character':
+        # elif strategy == "delete_character":
         #     mutated_value = self.delete_character_from_field(field_value)
-        # elif strategy == 'replace_character_with_special':
+        # elif strategy == "replace_character_with_special":
         #     mutated_value = self.replace_character_with_special(field_value)
-        # elif strategy == 'insert_numeric_edge_cases':
+        # elif strategy == "insert_numeric_edge_cases":
         #     mutated_value = self.insert_numeric_edge_cases(field_value)
-        # elif strategy == 'inject_whitespaces_in_field":
+        # elif strategy == "inject_whitespaces_in_field":
         #     mutated_value = self.inject_whitespaces_in_field(field_value)
         else:
             mutated_value = field_value
@@ -200,7 +213,7 @@ class CSVMutator(BaseMutator):
     # insert a random row 
     def insert_row(self):
         if not self.data_rows:
-            return self.original_content
+            return self.original_content.encode('utf-8')  
         
         # count n_fields 
         n_fields = 0
@@ -229,6 +242,9 @@ class CSVMutator(BaseMutator):
 
     # duplicate a random row 
     def duplicate_row(self):
+        if not self.data_rows:
+            return self.original_content.encode('utf-8')  
+            
         row_to_dupe = self.random.choice(self.data_rows)
         mutated_rows = self.data_rows.copy()
 
@@ -248,7 +264,7 @@ class CSVMutator(BaseMutator):
     def delete_row(self):
         # make sure there's at least 1 row before continuing 
         if len(self.data_rows) <= 1:
-            return self.original_content
+            return self.original_content.encode('utf-8')  
             
         # select a random row
         row_to_delete = self.random.randint(0, len(self.data_rows) - 1)
@@ -264,7 +280,3 @@ class CSVMutator(BaseMutator):
             full_csv = mutated_rows
             
         return self.serialise_csv(full_csv)
-
-        
-
-

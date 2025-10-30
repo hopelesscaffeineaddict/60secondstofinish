@@ -37,7 +37,10 @@ class BaseMutator(threading.Thread):
         logfile_path = os.path.join(mutated_dir, f"mutated_{binary_name}.txt")
         print(f'[DEBUG]: mutation log path: {logfile_path}')
         self.log_file = open(logfile_path, "wb")
-        self.log_file.write(f"example_input: {input}".encode())
+        # self.log_file.write(f"example_input: {input}".encode())
+        self.log_file.write(f"Mutation log for {binary_name}\n".encode('utf-8'))
+        self.log_file.write(f"Started at {time.strftime('%Y-%m-%d %H:%M:%S')}\n\n".encode('utf-8'))
+
 
         # setup execution log file 
         output_path = os.path.join(output_dir, f"{binary_name}_execution_log.txt")

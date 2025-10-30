@@ -41,7 +41,7 @@ class CrashHandler(threading.Thread):
                 new_crash = self.crashes.pop(0)
 
             # process new crash
-            print(new_crash)
+            # print(new_crash)
             result = new_crash["result"]
             crash_input = new_crash["input"]
 
