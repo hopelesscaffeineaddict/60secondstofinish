@@ -1,10 +1,13 @@
-# Start from a default ubuntu image.
-FROM ubuntu:22.04
+FROM python:3.11-slim
 
-# Copy/Compile my fuzzer
-COPY 60secondstofinish /
-RUN chmod +x /60secondstofinish
+WORKDIR /app
 
-# Run it.
-CMD ["/bin/bash", "/60secondstofinish"]
+COPY *.py ./
+COPY mutate/ ./mutate/
 
+COPY ./midpoint_binaries/ ./midpoint_binaries/
+COPY ./midpoint_inputs/ ./midpoint_inputs/
+
+RUN chmod +x ./midpoint_binaries/*
+
+CMD ["python3", "main.py", "--binary=./midpoint_binaries", "--input=./midpoint_inputs"]

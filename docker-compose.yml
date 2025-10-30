@@ -1,0 +1,8 @@
+version: '3.8'
+
+services:
+  fuzzer:
+    build: .
+    image: 60secondstofinish-fuzzer
+    volumes:
+      - ./fuzzer_output:/app/fuzzer_output
