@@ -79,7 +79,7 @@ class BaseMutator(threading.Thread):
 
     # log mutations
     def log_mutation(self, mutations_done, mutated_input):
-        log_entry = f"{mutations_done}: {mutated_input}\n".encode('utf-8', errors='ignore')
+        log_entry = f"{mutations_done}: {mutated_input.decode('utf-8')}\n".encode('utf-8', errors='ignore')
         self.log_file.write(log_entry)
         self.log_file.flush()
 
