@@ -106,6 +106,7 @@ class Runner(threading.Thread):
         # i really don't know if this works i'm just throwing shit at the wall
         stderr_str = stderr.decode("utf-8", errors="ignore").lower()
         crash_patterns = {
+            "stack smashing": CrashType.STACKSMASH,
             "segmentation fault": CrashType.SEGFAULT,
             "segfault": CrashType.SEGFAULT,
             "abort": CrashType.ABORT,
