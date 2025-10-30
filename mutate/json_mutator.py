@@ -1,5 +1,3 @@
-# In mutate/json_mutator.py, fix the JSONMutator class
-
 import json
 import io
 import queue

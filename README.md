@@ -1,19 +1,13 @@
 # 60secondstofinish
 COMP6447 Fuzzer
 
-### Order of implementation
-To prioritise for midpoint (ie. the bare minimum):
-1. Core engine/stuffies in main.py (basic argument parsic, binary/input matching), read file
-2. harness.py: Harness class w a execute method? Execute binary, pipe input to stdin, enforce timeout, return exit code
-3. 
 
-
-### Possible Project Directory Structure 
+### Project Directory Structure 
 fuzzer_project/
 ├── Dockerfile                 # Required for submission
 ├── requirements.txt           # Python dependencies (if any)
 ├── main.py                    # Entry point of the fuzzer
-├── README.md                  # (Optional) Project documentation
+├── README.md                  # Project documentation
 │
 ├── src/                       # Core fuzzer logic
 │   ├── __init__.py
@@ -39,53 +33,3 @@ fuzzer_project/
 │
 └── input_files/                  # Provided example input   
 
-### Architecture Diagram
-┌─────────────────────────────────────────────────────────────────────┐
-│                           Main Controller                          │
-│  - Orchestrates the entire fuzzing process                         │
-│  - Manages time limits and resource allocation                     │
-│  - Coordinates between all other components                        │
-└─────────────────────┬───────────────────────────────────────────────┘
-                      │
-                      ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                         Input Parser                               │
-│  - Parses command-line arguments                                    │
-│  - Validates input directories and files                           │
-│  - Matches binaries to their corresponding input files             │
-└─────────────────────┬───────────────────────────────────────────────┘
-                      │
-                      ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                       Binary Detector                              │
-│  - Detects the input format (JSON, XML, CSV, etc.)                │
-│  - Determines appropriate mutation strategies                      │
-└─────────────────────┬───────────────────────────────────────────────┘
-                      │
-                      ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                      Mutation Engine                               │
-│  - Implements various mutation strategies                          │
-│  - Generates new inputs based on the detected format               │
-└─────────────────────┬───────────────────────────────────────────────┘
-                      │
-                      ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                        Test Harness                                │
-│  - Executes the target binary with mutated inputs                  │
-│  - Detects crashes, hangs, and other abnormal behavior            │
-└─────────────────────┬───────────────────────────────────────────────┘
-                      │
-                      ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                    Statistics Collector                            │
-│  - Tracks execution statistics                                     │
-│  - Reports crashes found and other metrics                        │
-└─────────────────────┬───────────────────────────────────────────────┘
-                      │
-                      ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                      Format Handlers                               │
-│  - Specialized handlers for different input formats                │
-│  - Implements format-specific mutation strategies                  │
-└─────────────────────────────────────────────────────────────────────┘
