@@ -16,9 +16,9 @@ from runner import Runner
 from crashes import CrashHandler
 
 ## GLOBALS ##
-BINARIES_DIR = "binaries"
-INPUTS_DIR = "example_inputs"
-OUTPUT_DIR = "fuzzer_output"
+BINARIES_DIR = "/binaries"
+INPUTS_DIR = "/example_inputs"
+OUTPUT_DIR = "/fuzzer_output"
 
 runners = []
 

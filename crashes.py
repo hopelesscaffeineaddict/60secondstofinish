@@ -3,7 +3,7 @@ import threading
 import time
 from pathlib import Path
 
-OUTPUT_DIR = "fuzzer_output"
+OUTPUT_DIR = "/fuzzer_output"
 
 class CrashHandler(threading.Thread):
     def __init__(self, binary, condition, stop_event):
