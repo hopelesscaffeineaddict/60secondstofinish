@@ -41,9 +41,12 @@ This harness thread isolation ensures each execution of the binary is sandboxed 
 ## Crash Handler
 The crash handler thread dequeues entries from the crashes queue.
 
-It is responsible for persisting the crash data into a binary crash output file (which can be used for later analysis).
+It is responsible for persisting the crash data into a binary crash output file (which can be used for later analysis). In particular, two crash files are written:
 
-Each record includes the input used for the crashing case, the observed fault type, returned status code, stdout and stderr.
+1. **/fuzzer_output/bad_{binary_name}.txt**\
+    This file saves the input that was used to crash the binary
+2. **/fuzzer_output/{binary_name}_crashreport.txt**\
+    This saves the execution state of the program upon the crash (execution time, returned status code, stdout, stderr, crash type, etc.)
 
 This thread runs independently to ensure that writing results to files does not block or bottleneck ongoing fuzzing processing.
 
