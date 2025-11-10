@@ -35,7 +35,11 @@ class XMLMutator(BaseMutator):
             # fallback to base mutation if mutation fails
             print(f'[ERROR] mutation failed')
         
-    # def 
+    def add_siblings(self, data):
+        """Adds a random number of sibling elements into the tree"""
+        if isinstance(data, ET.Element) {
+            
+        }
 
     # Structural mutations
     # - add _ sibling nodes
