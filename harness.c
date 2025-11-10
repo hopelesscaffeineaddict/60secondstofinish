@@ -31,15 +31,13 @@ void timeout_handler(int signal) {
 }
 
 int main(int argc, char *argv[]) {
-    if (argc < 3) {
-        fprintf(stderr, "Usage: %s <timeout_sec> <binary> <stdin>\n", argv[0]);
+    if (argc < 2) {
+        fprintf(stderr, "Usage: %s <timeout_sec> <binary>\n", argv[0]);
         return 1;
     }
 
     int timeout_seconds = atoi(argv[1]);
     char *binary_path = argv[2];
-    char *input = argv[3];
-    size_t input_len = strlen(input);
 
     // create pipe to be able to redirect binary stdin
     int proc_pipe[2];
@@ -86,12 +84,17 @@ int main(int argc, char *argv[]) {
         alarm(timeout_seconds);
 
         // input the stdin to the binary
-        write(proc_pipe[1], input, input_len);
-        perror("write");
+        char buffer[BUFFER_LEN];
+        ssize_t nbyte;
+        while ((nbyte = read(STDIN_FILENO, buffer, BUFFER_LEN)) > 0) {
+            if (write(pipe_to_child[1], buffer, nbyte) != nbyte) {
+                // failed to write all of the input to program stdin
+                break;
+            }
+        }
 
         // closing read end of pipe will signal EOF for the child process
         close(proc_pipe[1]);
-
         waitpid(child_pid, &status, 0);
 
         // tracer loop

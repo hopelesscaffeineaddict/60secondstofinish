@@ -40,58 +40,95 @@ class Runner(threading.Thread):
 
     def execute_input(self, input_data: bytes) -> ExecutionResult:
         start_time = time.time()
+        harness = './harness'
+
         try:
-            # create subprocess for binary to run
-            # tbh don't know if this is the correct args or not
+            # create subprocess for the c harness to run and detect coverage
             proc = subprocess.Popen(
-                [self.binary_path],
+                [harness, self.timeout, self.binary_path],
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
-                preexec_fn=os.setsid  # so we can kill process group on timeout
             )
 
-            try:
-                stdout, stderr = proc.communicate(input=input_data, timeout=self.timeout)
-                execution_time = time.time() - start_time
-                return_code = proc.returncode
-                crash_info = self.analyse_crash(return_code, stderr, execution_time)
-                return ExecutionResult(
-                    return_code = return_code,
-                    stdout = stdout,
-                    stderr = stderr,
-                    execution_time = execution_time,
-                    crashed = crash_info is not None,
-                    crash_type = crash_info if crash_info else None,
-                    signal = self.extract_signal_from_stderr(stderr),
-                )
-            # error handling for timeout
-            except subprocess.TimeoutExpired:
-                # kill process group
-                try:
-                    os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
-                except Exception:
-                    pass
-                proc.wait()
-                return ExecutionResult(
-                    return_code = -1,
-                    stdout = b"",
-                    stderr = b"Timeout",
-                    execution_time = time.time() - start_time,
-                    crashed = True,
-                    crash_type = CrashType.TIMEOUT,
-                    signal = None,
-                )
-        except Exception as e:
-            return ExecutionResult(
-                return_code = -2,
-                stdout = b"",
-                stderr = str(e).encode(),
-                execution_time = time.time() - start_time,
-                crashed = False,
-                crash_type = None,
-                signal = None,
-            )
+            # give the harness extra time to run (as ptrace is quite slow)
+            stdout, stderr = proc.communicate(input=input_data, timeout=self.timeout + 1)
+            execution_time = time.time() - start_time
+            return_code = proc.returncode
+
+            # TODO: parse the harness results
+            self.parse_harness_results(return_code, stdout, stderr, execution_time)
+
+            # crash_info = self.analyse_crash(return_code, stderr, execution_time)
+            # return ExecutionResult(
+            #     return_code = return_code,
+            #     stdout = stdout,
+            #     stderr = stderr,
+            #     execution_time = execution_time,
+            #     crashed = crash_info is not None,
+            #     crash_type = crash_info if crash_info else None,
+            #     signal = self.extract_signal_from_stderr(stderr),
+            # )
+        except subprocess.TimeoutExpired:
+            pass
+
+    def parse_harness_results(self, return_code: int, stdout: bytes, stderr: bytes, execution_time: float):
+        pass
+
+    # def execute_input(self, input_data: bytes) -> ExecutionResult:
+    #     start_time = time.time()
+    #     try:
+    #         # create subprocess for binary to run
+    #         # tbh don't know if this is the correct args or not
+    #         proc = subprocess.Popen(
+    #             [self.binary_path],
+    #             stdin=subprocess.PIPE,
+    #             stdout=subprocess.PIPE,
+    #             stderr=subprocess.PIPE,
+    #             preexec_fn=os.setsid  # so we can kill process group on timeout
+    #         )
+
+    #         try:
+    #             stdout, stderr = proc.communicate(input=input_data, timeout=self.timeout)
+    #             execution_time = time.time() - start_time
+    #             return_code = proc.returncode
+    #             crash_info = self.analyse_crash(return_code, stderr, execution_time)
+    #             return ExecutionResult(
+    #                 return_code = return_code,
+    #                 stdout = stdout,
+    #                 stderr = stderr,
+    #                 execution_time = execution_time,
+    #                 crashed = crash_info is not None,
+    #                 crash_type = crash_info if crash_info else None,
+    #                 signal = self.extract_signal_from_stderr(stderr),
+    #             )
+    #         # error handling for timeout
+    #         except subprocess.TimeoutExpired:
+    #             # kill process group
+    #             try:
+    #                 os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+    #             except Exception:
+    #                 pass
+    #             proc.wait()
+    #             return ExecutionResult(
+    #                 return_code = -1,
+    #                 stdout = b"",
+    #                 stderr = b"Timeout",
+    #                 execution_time = time.time() - start_time,
+    #                 crashed = True,
+    #                 crash_type = CrashType.TIMEOUT,
+    #                 signal = None,
+    #             )
+    #     except Exception as e:
+    #         return ExecutionResult(
+    #             return_code = -2,
+    #             stdout = b"",
+    #             stderr = str(e).encode(),
+    #             execution_time = time.time() - start_time,
+    #             crashed = False,
+    #             crash_type = None,
+    #             signal = None,
+    #         )
 
     # analyse execution results to determine if a crash occurred
     def analyse_crash(self, return_code: int, stderr: bytes, execution_time: float):
