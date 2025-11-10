@@ -8,7 +8,7 @@ from format import format_type, FormatType
 from .base import BaseMutator
 
 # Generic mutation strategies 
-class GenericMutator(threading.Thread):
+class GenericMutator(BaseMutator):
     known_ints = {
         "CHAR_MAX": 255,
         "INT_MAX": 2147483647,
@@ -18,38 +18,121 @@ class GenericMutator(threading.Thread):
         "UINT_MAX_+1": 429496726
     }
 
-    def __init__(self, format_type, input, input_queue, stop_event, binary_name, max_queue_size=200):
-        super().__init__(daemon=True)
-        self.max_queue_size = max_queue_size
-        self.input_queue = input_queue
-        self.stop_event = stop_event
-        self.max_queue_size = max_queue_size
+    # special byte values
+    special_bytes = [
+        b'\x00',  # nullbyte
+        b'\x0A',  # newline
+        b'\x0D',  # carriage return
+        b'\x09',  # tab
+        b'\x20',  # space
+        b'\xFF',  # high byte
+        b'\x7F',  # delete
+        b'\x8B',  # UTF-8 start byte
+        b'\xEF\xBB\xBF',  # UTF-8 BOM
+    ]
 
-    def mutate(self):
-        strategy = random.choice(['delete_rand_char',
-                                'insert_rand_char',
-                                # 'insert_rand_large_char',
-                                'insert_known_int',
-                                'bit_flip_not',
-                                'bit_flip_rand',
-                                'splice_bits'])
 
-        if strategy == 'delete_rand_char':
-            mutated_str = self.delete_rand_char(self.input)
-        elif strategy == 'insert_rand_char':
-            mutated_str = self.insert_rand_char(self.input)
-        # elif strategy == 'insert_rand_large_char':
-        #     mutated_str = self.insert_rand_large_char(self.input)
-        elif strategy == 'insert_known_int':
-            mutated_str = self.insert_known_int(self.input)
+    def __init__(self, example_input, input_queue, stop_event, binary_name, max_queue_size):
+        super().__init__(example_input, input_queue, stop_event, binary_name, max_queue_size)
+        print(example_input)
+
+        self.original_input = None
+        self.current_input = None
+        self.parse_input()
+
+    def parse_input(self):
+        if isinstance(self.input, str):
+            print(f'[DEBUG] plaintext input is a file path')
+            try: 
+                with open(self.input, "rb") as f:
+                    self.original_input = f.read()
+            except Exception as e:
+                print(f'[ERROR] error reading file: {e}')
+                self.original_input = b''
+        elif isinstance(self.input, bytes):
+            self.original_input = self.input
+        else:
+            self.original_input = b''
+
+        self.current_input = self.original_input
+
+    # chainable mutation function that applies n_mutations sequentially, building on the current state
+    def mutate(self, n_mutations=10):
+        current_data = self.current_input
+        
+        # sequentially apply mutations in diff categories
+        for _ in range(n_mutations):
+            mutation_category = self.random.choice(["byte_mutation", "structure_mutation", "insertion_mutation"])
+            
+            if mutation_category == "byte_mutation":
+                current_data = self.mutate_bytes(current_data)
+            elif mutation_category == "structure_mutation":
+                current_data = self.mutate_structure(current_data)
+            elif mutation_category == "insertion_mutation":
+                current_data = self.mutate_insertion(current_data)
+
+        self.current_input = current_data
+        return current_data
+
+    # byte lvl mutations
+    def mutate_bytes(self, data):
+        strategy = self.random.choice([
+            'bit_flip_rand',
+            'bit_flip_not',
+            'insert_special_bytes'
+        ])
+        
+        if strategy == 'bit_flip_rand':
+            return self.bit_flip_rand(data)
         elif strategy == 'bit_flip_not':
-            mutated_str = self.bit_flip_not(self.input)
-        elif strategy == 'bit_flip_rand':
-            mutated_str = self.bit_flip_rand(self.input)
-        elif strategy == 'splice_bits':
-            mutated_str = self.splice_bits(self.input)
+            return self.bit_flip_not(data)
+        elif strategy == 'insert_special_bytes':
+            return self.insert_special_bytes(data)
+        
+        return data
 
-        return mutated_str
+    # randomly apply structural mutations
+    def mutate_structure(self, data):
+        strategy = self.random.choice([
+            'delete_rand_char',
+            'splice_bits',
+            'swap_bytes',
+            # 'reverse_segment'
+        ])
+        
+        if strategy == 'delete_rand_char':
+            return self.delete_rand_char(data)
+        elif strategy == 'splice_bits':
+            return self.splice_bits(data)
+        elif strategy == 'swap_bytes':
+            return self.swap_bytes(data)
+        # elif strategy == 'reverse_segment':
+        #     return self.reverse_segment(data)
+        
+        return data
+
+    # randomly apply insertion mutations
+    def mutate_insertion(self, data):
+        strategy = self.random.choice([
+            'insert_rand_char',
+            # 'insert_rand_large_char',
+            'insert_known_int',
+            'insert_random_string',
+            'insert_boundary_values'
+        ])
+        
+        if strategy == 'insert_rand_char':
+            return self.insert_rand_char(data)
+        # elif strategy == 'insert_rand_large_char':
+        #     return self.insert_rand_large_char(data)
+        elif strategy == 'insert_known_int':
+            return self.insert_known_int(data)
+        elif strategy == 'insert_random_string':
+            return self.insert_random_string(data)
+        elif strategy == 'insert_boundary_values':
+            return self.insert_boundary_values(data)
+        
+        return data
 
     """Delete a random characters from input"""
     def delete_rand_char(self, input: bytes) -> bytes:
@@ -75,8 +158,25 @@ class GenericMutator(threading.Thread):
     def insert_known_int(self, input: bytes) -> bytes:
         num = random.choice(list(self.known_ints.values()))
         pos = random.randrange(len(input) + 1)
-        num_bytes = num.to_bytes(4, 'big')
-        return input[:pos] + num_bytes + input[pos:]
+        
+        # check n_bytes needed based on value
+        if num <= 0xFF:
+            byte_length = 1
+        elif num <= 0xFFFF:
+            byte_length = 2
+        elif num <= 0xFFFFFFFF:
+            byte_length = 4
+        else:
+            byte_length = 8
+        
+        try:
+            num_bytes = num.to_bytes(byte_length, 'big')
+            return input[:pos] + num_bytes + input[pos:]
+        except OverflowError:
+            # fallback to a smaller value if conversion fails
+            fallback_num = 0xFFFFFFFF   
+            num_bytes = fallback_num.to_bytes(4, 'big')
+            return input[:pos] + num_bytes + input[pos:]
     
     """Twos complement bit flip of input"""
     def bit_flip_not(self, input: bytes) -> bytes:
@@ -106,3 +206,48 @@ class GenericMutator(threading.Thread):
 
         insert_at = random.randrange(len(input) + 1)
         return input[:insert_at] + segment + input[insert_at:]
+
+    # insert special bytes randomly
+    def insert_special_bytes(self, input_data: bytes): 
+        if not input_data:
+            return input_data
+        pos = self.random.randrange(len(input_data) + 1)
+        special_byte = self.random.choice(self.special_bytes)
+        return input_data[:pos] + special_byte + input_data[pos:]   
+
+    # STRUCTURAL MUTATIONS
+    # randomly swap two bytes
+    def swap_bytes(self, input_data: bytes) -> bytes:
+        if len(input_data) < 2:
+            return input_data
+        
+        pos1 = self.random.randrange(len(input_data))
+        pos2 = self.random.randrange(len(input_data))
+        
+        data = bytearray(input_data)
+        data[pos1], data[pos2] = data[pos2], data[pos1]
+        
+        return bytes(data)
+
+    # STRING INSERTION STRATEGIES
+    # inserts random ASCII string
+    def insert_random_string(self, input_data):
+        rand_length = self.random.randrange(len(input_data) + 1)
+        length = self.random.randint(5, 50)
+        random_string = ''.join(self.random.choices(
+            'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+-=[]{}|;:,.<>?', k=length))
+        return input_data[:rand_length] + random_string.encode('ascii') + input_data[rand_length:]   
+
+    # insert boundary values
+    def insert_boundary_values(self, input_data):
+        pos = self.random.randrange(len(input_data) + 1)
+        boundary_values = [
+            b'\x00\x00\x00\x00',  # null bytes
+            b'\xFF\xFF\xFF\xFF',  # max bytes
+            b'\x7F\xFF\xFF\xFF',  # max 32bit signed int
+            b'\x80\x00\x00\x00',  # min 32bit signed int
+            b'\xFF\xFE',          # utf 16
+            b'\xC0\x80',          # UTF-8 encoding
+        ]
+        boundary_value = self.random.choice(boundary_values)
+        return input_data[:pos] + boundary_value + input_data[pos:]

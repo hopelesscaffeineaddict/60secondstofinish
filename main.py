@@ -49,8 +49,8 @@ def binary_process(binary_path, input_path, fuzz_time = 60):
         mutator = CSVMutator(input_path, input_queue, stop_event, binary_name, max_queue_size)
     else:
         # fallback to generic mutator
-        print(f"[{binary_name}] Using generic BaseMutator for format: {input_format.name}")
-        mutator = BaseMutator(input_path, input_queue, stop_event, binary_name, max_queue_size)
+        print(f"[{binary_name}] Using GenericMutator for format: {input_format.name}")
+        mutator = GenericMutator(input_path, input_queue, stop_event, binary_name, max_queue_size)
 
     runner = Runner(binary_path, input_queue, crash_handler, stop_event, mutator)
 

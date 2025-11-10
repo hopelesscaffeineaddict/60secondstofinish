@@ -59,17 +59,31 @@ def is_json(input: bytes) -> bool:
         return False
 
 # Checks if the provided byte input is a CSV format
-def is_csv(input: bytes) -> bool:
+def is_csv(input_bytes: bytes) -> bool:
     try:
-        input_str = input.decode('utf-8')
-
-        if not input_str.strip():
+        input_str = input_bytes.decode('utf-8', errors='ignore').strip()
+        if not input_str:
             return False
-        # Check if it resembles CSV file
-        csv.Sniffer().sniff(input_str)
+
+        # must contain at least one comma
+        if ',' not in input_str:
+            return False
+
+        # split into lines and ignore empty lines
+        lines = [line for line in input_str.splitlines() if line.strip()]
+        if len(lines) < 1:
+            return False
+
+        # require at least one line with multiple comma-delimited fields
+        has_multiple_fields = any(len(line.split(',')) > 1 for line in lines)
+        if not has_multiple_fields:
+            return False
+
         return True
-    except (csv.Error, UnicodeDecodeError):
+
+    except UnicodeDecodeError:
         return False
+
 
 # Checks if the provided byte input is a XML format
 def is_xml(input: bytes) -> bool:

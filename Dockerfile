@@ -10,4 +10,4 @@ COPY ./midpoint_inputs/ ./midpoint_inputs/
 
 RUN chmod +x ./midpoint_binaries/*
 
-CMD ["python3", "main.py", "--binary=./midpoint_binaries", "--input=./midpoint_inputs"]
+CMD ["python3", "main.py", "--binary=binaries", "--input=example_inputs"]
