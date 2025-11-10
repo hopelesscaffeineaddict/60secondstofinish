@@ -1,6 +1,12 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
+#include <string.h>
+#include <unistd.h>
 #include <sys/ptrace.h>
+#include <sys/wait.h>
+#include <signal.h>
+#include <sys/user.h>
 
 #define BUFFER_LEN 4096
 #define MAX_COVERAGE_SIZE 65536
@@ -33,10 +39,11 @@ int main(int argc, char *argv[]) {
     int timeout_seconds = atoi(argv[1]);
     char *binary_path = argv[2];
     char *input = argv[3];
+    size_t input_len = strlen(input);
 
     // create pipe to be able to redirect binary stdin
-    int pipe[2];
-    if (pipe(pipe) == -1) {
+    int proc_pipe[2];
+    if (pipe(proc_pipe) == -1) {
         perror("pipe");
         return 1;
     }
@@ -52,40 +59,38 @@ int main(int argc, char *argv[]) {
         // child process (will run the binary)
 
         // close write end of pipe (we only care about read end)
-        close(pipe[1]);
+        close(proc_pipe[1]);
         // redirect stdin to read from pipe
-        dup2(pipe[0], STDIN_FILENO);
-        close(pipe[0]);
+        dup2(proc_pipe[0], STDIN_FILENO);
+        close(proc_pipe[0]);
 
         // allow parent to attach to process
         ptrace(PTRACE_TRACEME, 0, NULL, NULL);
         raise(SIGSTOP);
 
         // execute the binary with the input
-        execv(target_path, NULL);
+        char *argv[] = {binary_path, NULL};
+        execv(binary_path, argv);
         perror("execv");
+        _exit(1);
     } else {
         // parent process (will run the tracer)
         int status;
         struct user_regs_struct regs;
 
         // parent proc will only be writing
-        close(pipe[0]);
+        close(proc_pipe[0]);
 
         // set up a timeout
-        signal(SIGALRM, alarm_handler);
+        signal(SIGALRM, timeout_handler);
         alarm(timeout_seconds);
 
-        char buffer[BUFFER_LEN];
-        ssize_t nbytes;
-        // input into child procs stdin
-        while ((nbytes = read(STDIN_FILENO, buffer, BUFFER_LEN)) > 0) {
-            if (write(pipe_to_child[1], buffer, nbytes) != nbytes) {
-                break;
-            }
-        }
+        // input the stdin to the binary
+        write(proc_pipe[1], input, input_len);
+        perror("write");
+
         // closing read end of pipe will signal EOF for the child process
-        close(pipe_to_child[1]);
+        close(proc_pipe[1]);
 
         waitpid(child_pid, &status, 0);
 
