@@ -1,0 +1,17 @@
+python3 main.py --binary=json_binaries --input=json_input
+
+python3 main.py --binary=plain_binaries --input=plain_inputs
+
+python3 main.py --binary=binaries --input=example_inputs
+
+
+python3 main.py --binary=../60secondstofinish/json_binaries --input=../60secondstofinish/json_input
+
+echo '{"0":-19001020089231092381092830193801923,"1":1,"2":2,"3":3,"4":4,"5":5,"6":6,"7":7,"fuzzer_key_6385":{"nested":1}, "0":0,"1":1,"2":2,"3":3,"4":4,"5":5,"6":6,"7":7,"fuzzer_key_6385":{"nested":1},"0":0,"1":1,"2":2,"3":3,"4":4,"5":5,"6":6,"7":7,"fuzzer_key_6385":{"nested":1},"0":0,"1":1,"2":2,"3":3,"4":4,"5":5,"6":6,"7":7,"fuzzer_key_6385":{"nested":1},"0":0,"1":1,"2":2,"3":3,"4":4,"5":5,"6":6,"7":7,"fuzzer_key_6385":{"nested":1}}' | ./json2
+
+echo '{"0":-19001020089231092381092830193801923,"1":1,"2":2,"3":3,"4":4,"5":5,"6":6,"7":7,"fuzzer_key_6385":{"nested":1}, "0":0,"1":1,"2":2,"3":3,"4":4,"5":5,"6":6,"7":7,"fuzzer_key_6385":{"nested":1},"0":0,"1":1,"2":2,"3":3,"4":4,"5":5,"6":6,"7":7,"fuzzer_key_6385":{"nested":1},"0":0,"1":1,"2":2,"3":3,"4":4,"5":5,"6":6,"7":7,"fuzzer_key_6385":{"nested":1},"0":0,"1":1,"2":2,"3":3,"4":4,"5":5,"6":6,"7":7,"fuzzer_key_6385":{"nested":1}}' | ./json2
+
+~/60secondstofinish/binaries/jpg1 < jpg1.txt
+
+
+~/60secondstofinish/binaries/xml3 < bad_xml3.txt
