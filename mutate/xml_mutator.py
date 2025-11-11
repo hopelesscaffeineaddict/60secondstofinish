@@ -29,27 +29,48 @@ class XMLMutator(BaseMutator):
 
         try:
             mutated_root = strategy(root)
-            # always return bytes 
+            # ET.dump(mutated_root)
             return ET.tostring(mutated_root, encoding='unicode')
         except Exception:
-            # fallback to base mutation if mutation fails
             print(f'[ERROR] mutation failed')
         
-    def add_siblings(self, data):
-        """Adds a random number of sibling elements into the tree"""
-        if isinstance(data, ET.Element) {
-            
-        }
-
     # Structural mutations
     # - add _ sibling nodes
     # - add _ child nodes
-    # - delete leaf node
+    # - delete random node
+
+    def add_siblings(self, root):
+        """Adds a random number of sibling elements into the tree"""
+        if isinstance(root, ET.Element):
+            num = random.randint(1, 1000)
+            for i in range(1, num):
+                ET.SubElement(root, 'p')
+        return root
+
+    def add_children(self, root):
+        """Adds a random number of child elements into the tree"""
+        if isinstance(root, ET.Element):
+            node = root
+            num = random.randint(1, 1000)
+            for i in range(1, num):
+                child = ET.SubElement(node, 'p')
+                node = child
+        return root
+    
+    def delete_node(self, root):
+        """Deletes a random node from the tree"""
+        if isinstance(root, ET.Element):
+            children = list(root)
+            delete_child = random.choice(children)
+            root.remove(delete_child)
+        return root
 
     # URL/href/anchor tag mutations
     # - edit url
     #   - format string payload
     #   - xxs payload
+
+    
 
     # Content mutations
     #   - add content
