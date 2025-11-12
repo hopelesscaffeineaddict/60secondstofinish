@@ -136,10 +136,10 @@ class GenericMutator(BaseMutator):
 
     """Delete a random characters from input"""
     def delete_rand_char(self, input: bytes) -> bytes:
-        if not input:
+        if not input or len(input) <= 1:
             return input
-        pos = random.randrange(len(input) - 1)
-        end = random.randrange(pos + 1, len(input))
+        pos = random.randrange(len(input))
+        end = random.randrange(pos + 1, len(input) + 1)
         return input[:pos] + input[end:]
 
     """Insert a random characters into input"""

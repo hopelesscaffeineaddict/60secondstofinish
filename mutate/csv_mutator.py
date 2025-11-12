@@ -10,7 +10,7 @@ from format import FormatType
 class CSVMutator(BaseMutator):
     def __init__(self, input_file, input_queue, stop_event, binary_name, max_queue_size):
         super().__init__(input_file, input_queue, stop_event, binary_name, max_queue_size)
-        print(input_file)
+        # print(input_file)
 
         self.parsed_csv = []
         self.data_rows = []
@@ -74,6 +74,11 @@ class CSVMutator(BaseMutator):
             self.original_content = ""
             self.delimiter = ','
             self.quote_char = '"'
+            
+        # Check if original_content is None or empty
+        if not self.original_content:
+            print(f'[ERROR] original_content from csv is None or empty. Returning.')
+            return
 
         # detect line ending style
         if '\r\n' in self.original_content:
