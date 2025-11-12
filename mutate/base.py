@@ -85,7 +85,7 @@ class BaseMutator(threading.Thread):
     def log_mutation(self, mutations_done, mutated_input):
         if isinstance(mutated_input, bytes):
             # hex for binary data
-            log_content = f"{mutations_done}: {mutated_input.hex()}\n"
+            log_content = f"{mutations_done}: {mutated_input}\n"
         elif isinstance(mutated_input, str):
             #  directly log string inputs
             log_content = f"{mutations_done}: {mutated_input}\n"
