@@ -11,6 +11,21 @@ class XMLMutator(BaseMutator):
     def __init__(self, input_file, input_queue, stop_event, binary_name, max_queue_size):
         super().__init__(input_file, input_queue, stop_event, binary_name, max_queue_size)
 
+        self.control_chars = {
+            "null": "\0",
+            "backspace": "\b",
+            "tab": "\t",
+            "new_line": "\n",
+            "carriage_ret": "\r",
+        }
+
+        self.str_payloads = {
+            "format_str": "%100c%100$n",
+            "xss": "javascript:alert(1)",
+            "large_str": "A" * random.randint(100, 3000),
+            "control_char" : random.choice(self.control_chars.values()),
+        }
+
     def mutate(self):
         # handle xml inputs
         try:
@@ -24,7 +39,9 @@ class XMLMutator(BaseMutator):
             return
         
         strategy = random.choice([
-            # add mutations here
+            self.add_siblings,
+            self.add_children,
+            self.delete_node,
         ])
 
         try:
@@ -70,7 +87,14 @@ class XMLMutator(BaseMutator):
     #   - format string payload
     #   - xxs payload
 
-    
+    def edit_url(self, root):
+        """Edits the URL within an anchor tag"""
+        if isinstance(root, ET.Element):
+            for anchor in root.findall('a'):
+                if anchor.get('href'):
+                    payload = random.choice(self.str_payloads.values())
+                    anchor.set('href', payload)
+        return root
 
     # Content mutations
     #   - add content
