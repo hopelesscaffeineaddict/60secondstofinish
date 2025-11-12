@@ -10,6 +10,7 @@ from inputs import parse_arguments, validate_arguments, match_binaries_to_inputs
 from mutate.base import BaseMutator
 from mutate.json_mutator import JSONMutator
 from mutate.csv_mutator import CSVMutator
+from mutate.xml_mutator import XMLMutator
 from mutate.mutator import GenericMutator
 
 from runner import Runner
@@ -47,6 +48,9 @@ def binary_process(binary_path, input_path, fuzz_time = 60):
     elif input_format == FormatType.CSV:
         print(f"[{binary_name}] Detected CSV format. Using CSVMutator.")
         mutator = CSVMutator(input_path, input_queue, stop_event, binary_name, max_queue_size)
+    elif input_format == FormatType.XML:
+        print(f"[{binary_name}] Detected XML format. Using XMLMutator.")
+        mutator = XMLMutator(input_path, input_queue, stop_event, binary_name, max_queue_size)
     else:
         # fallback to generic mutator
         print(f"[{binary_name}] Using generic BaseMutator for format: {input_format.name}")
