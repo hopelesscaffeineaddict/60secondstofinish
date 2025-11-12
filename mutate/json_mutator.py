@@ -3,6 +3,7 @@ import io
 import queue
 import time
 import random
+import copy
 
 from .base import BaseMutator
 from format import FormatType
@@ -24,36 +25,120 @@ class JSONMutator(BaseMutator):
             "large_negative": -2147483648,
             "max_int": 2**31 - 1,
             "min_int": -2**31,
+            "boundary_values": [0, 1, 2, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536, 100, 1000, 10000, 100000]
         }
 
-    def mutate(self):
+        self.original_json = None
+        self.current_json = None
+        self.parse_json()
+    
+    # parse JSON input
+    def parse_json(self):
         try:
-            # handle both string and bytes input
             if isinstance(self.input, bytes):
-                content = json.loads(self.input.decode('utf-8'))
+                print('[DEBUG] decoding bytes to json')
+                self.original_json = json.loads(self.input.decode('utf-8'))
             else:
-                content = json.loads(self.input)
-        except (json.JSONDecodeError, UnicodeDecodeError):
-            # if input not valid JSON, fallback to base mutator (ie. simple string mutation)
+                self.original_json = json.loads(self.input)
+        
+            # create a copy of original for mutate()
+            self.current_json = copy.deepcopy(self.original_json)
+        except (json.JSONDecodeError, UnicodeDecodeError) as e:
+            print(f'[DEBUG] Error parsing JSON: {e}')
+            self.original_json = {}
+            self.current_json = {}
+        
+    # chainable mutation function that applies n_mutations sequentially, building on the current state
+    def mutate(self, n_mutations=1):  # Reduced from 10 to 1 for speed
+        current_data = copy.deepcopy(self.current_json)
+        
+        for _ in range(n_mutations):
+            mutation_category = self.random.choice(["value_mutation", "structure_mutation", "content_mutation", "boundary_mutation"])
+            if mutation_category == "value_mutation":
+                current_data = self.mutate_values(current_data)
+            elif mutation_category == "structure_mutation":
+                current_data = self.mutate_structure(current_data)
+            elif mutation_category == "content_mutation":
+                current_data = self.mutate_content(current_data)
+            elif mutation_category == "boundary_mutation":
+                current_data = self.mutate_boundary_values(current_data)
+        
+        self.current_json = current_data
+        
+        # serialise and return as bytes
+        try:
+            return json.dumps(current_data, separators=(',', ':')).encode('utf-8')
+        except (TypeError, ValueError):
             return self._fallback_mutation()
 
-        strategy = random.choice([
-            self._mutate_value,
-            self._change_type,
-            self._add_key_value,
-            self._remove_key_value,
-            self._mutate_array_structure,
-            self._add_nested_json,
+    # value type mutations
+    def mutate_values(self, data):
+        strategy = self.random.choice([
+            'mutate_value',
+            'change_type',
         ])
 
-        try:
-            mutated_content = strategy(content)
-            # always return bytes 
-            return json.dumps(mutated_content, separators=(',', ':')).encode('utf-8')
-        except Exception:
-            # fallback to base mutation if mutation fails
-            return self._fallback_mutation()
-    
+        if strategy == 'mutate_value':
+            return self._mutate_value(data)
+        elif strategy == 'change_type':
+            return self._change_type(data)
+        
+        return data
+
+    # structural mutations
+    def mutate_structure(self, data):
+        strategy = self.random.choice([
+            'add_key_value',
+            'remove_key_value',
+            'duplicate_key_value',
+            'mutate_array_structure',
+        ])
+        
+        if strategy == 'add_key_value':
+            return self._add_key_value(data)
+        elif strategy == 'remove_key_value':
+            return self._remove_key_value(data)
+        elif strategy == 'duplicate_key_value':
+            return self._duplicate_key_value(data)
+        elif strategy == 'mutate_array_structure':
+            return self._mutate_array_structure(data)
+        
+        return data
+
+    # content mutations
+    def mutate_content(self, data):
+        strategy = self.random.choice([
+            'add_nested_json',
+            'duplicate_json',
+        ])
+        
+        if strategy == 'add_nested_json':
+            return self._add_nested_json(data)
+        elif strategy == 'duplicate_json':
+            return self._duplicate_json(data)
+        
+        return data 
+
+    # boundary value mutations - targeting fields that might represent lengths/sizes
+    def mutate_boundary_values(self, data):
+        """Specifically target numeric fields that might represent lengths or sizes"""
+        if isinstance(data, dict):
+            for key in data:
+                # Look for keys that might represent lengths or sizes
+                if any(keyword in key.lower() for keyword in ["len", "length", "size", "count", "num"]):
+                    if isinstance(data[key], (int, float)):
+                        # Replace with a boundary value
+                        data[key] = self.random.choice(self.known_ints["boundary_values"])
+                else:
+                    # Recursively check nested objects
+                    data[key] = self.mutate_boundary_values(data[key])
+        elif isinstance(data, list) and data:
+            # Randomly pick an element to mutate
+            idx = self.random.randrange(len(data))
+            data[idx] = self.mutate_boundary_values(data[idx])
+        
+        return data
+
     # fallback mutation 
     def _fallback_mutation(self):
         """Simple fallback mutation when JSON parsing fails"""
@@ -75,8 +160,11 @@ class JSONMutator(BaseMutator):
         elif isinstance(data, list) and data:
             idx = random.randrange(len(data))
             data[idx] = self._mutate_value(data[idx])
-        # elif isinstance(data, str):
-        #     return self.bit_flip_rand(data.encode('utf-8')).decode('utf-8', errors='ignore')
+        elif isinstance(data, str):
+            # Mutate string by adding characters
+            n_insert = random.randint(1, 10)
+            extra_chars = ''.join(random.choices('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ', k=n_insert))
+            return data + extra_chars
         elif isinstance(data, (int, float)):
             choice = random.random()
             if choice < 0.5:
@@ -88,7 +176,7 @@ class JSONMutator(BaseMutator):
         return data
     
     def _change_type(self, data):
-        """Changes the type of a randomly selected value."""
+        """Changes type of a randomly selected value."""
         if isinstance(data, dict) and data:
             key = random.choice(list(data.keys()))
             original_value = data[key]
@@ -104,7 +192,7 @@ class JSONMutator(BaseMutator):
     def _add_key_value(self, data):
         """Adds a new key-value pair to a dictionary."""
         if isinstance(data, dict):
-            new_key = "fuzzer_key_" + str(random.randint(1000, 9999))
+            new_key = "fuzzer_key_" + str(random.randint(1, 1000))
             new_value = random.choice([
                 "new_value", 42, True, None, {"nested": 1}, [1,2,3]
             ])
@@ -116,6 +204,15 @@ class JSONMutator(BaseMutator):
         if isinstance(data, dict) and data:
             key_to_remove = random.choice(list(data.keys()))
             del data[key_to_remove]
+        return data
+    
+    # duplicate a key value pair
+    def _duplicate_key_value(self, data):
+        if isinstance(data, dict) and data:
+            key_to_duplicate = random.choice(list(data.keys()))
+            value_to_duplicate = data[key_to_duplicate]
+            new_key = key_to_duplicate + "duplicate"
+            data[new_key] = value_to_duplicate
         return data
 
     def _mutate_array_structure(self, data):
@@ -144,9 +241,24 @@ class JSONMutator(BaseMutator):
         }
 
         if isinstance(data, dict):
-            new_key = "fuzzer_nested_obj_" + str(random.randint(1000, 9999))
+            new_key = "fuzzer_nested_obj_" + str(random.randint(1, 1000))
             data[new_key] = nested_obj
         elif isinstance(data, list):
             data.append(nested_obj)
             
         return data
+    
+    # duplicates JSON object
+    def _duplicate_json(self, data):
+        if isinstance(data, dict):
+            num_copies = random.randint(2, 5) 
+            result = []
+            for i in range(num_copies):
+                result.append(copy.deepcopy(data))
+            return result
+        
+        # duplicate list
+        elif isinstance(data, list):
+            return data + copy.deepcopy(data)
+        else:
+            return data
