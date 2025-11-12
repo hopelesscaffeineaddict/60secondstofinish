@@ -81,10 +81,19 @@ class BaseMutator(threading.Thread):
     def mutate(self):
         raise NotImplementedError("Subclasses to implement respective mutation methods")
 
-    # log mutations
+    # log mutations for diff input types
     def log_mutation(self, mutations_done, mutated_input):
-        log_entry = f"{mutations_done}: {mutated_input.decode('utf-8')}\n".encode('utf-8', errors='ignore')
-        self.log_file.write(log_entry)
+        if isinstance(mutated_input, bytes):
+            # hex for binary data
+            log_content = f"{mutations_done}: {mutated_input.hex()}\n"
+        elif isinstance(mutated_input, str):
+            #  directly log string inputs
+            log_content = f"{mutations_done}: {mutated_input}\n"
+        else:
+            # anyth else: conv to strings
+            log_content = f"{mutations_done}: {str(mutated_input)}\n"
+
+        self.log_file.write(log_content.encode('utf-8'))
         self.log_file.flush()
 
     
@@ -93,7 +102,19 @@ class BaseMutator(threading.Thread):
         if self.exec_log_file and not self.exec_log_file.closed:
                 self.executions_done += 1
                 self.exec_log_file.write(f"Execution #{self.executions_done}\n")
-                self.exec_log_file.write(f"Input: {input_data[:100]}{'...' if len(input_data) > 100 else ''}\n")
+                
+                # diff input types for logging
+                if isinstance(input_data, bytes):
+                    input_repr = input_data.hex()
+                elif isinstance(input_data, str):
+                    input_repr = input_data
+                else:
+                    input_repr = str(input_data)
+                
+                if len(input_repr) > 100:
+                    input_repr = input_repr[:100] + '...'
+                
+                self.exec_log_file.write(f"Input: {input_repr}\n")
                 self.exec_log_file.write(f"Return Code: {result.return_code}\n")
 
                 if result.crashed:
