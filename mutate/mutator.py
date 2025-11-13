@@ -1,8 +1,6 @@
-import time
-import threading
 import random
-import queue
 import os
+import re
 
 from format import format_type, FormatType
 from .base import BaseMutator
@@ -15,7 +13,9 @@ class GenericMutator(BaseMutator):
         "UINT_MAX": 4294967295,
         "INT_MAX_+1": 2147483648,
         "LLONG_MAX": 9223372036854775807,
-        "UINT_MAX_+1": 429496726
+        "UINT_MAX_+1": 429496726,
+        "INT_MIN": -2147483647,
+        "INT_MIN-1": -2147483648,
     }
 
     # special byte values
@@ -43,7 +43,7 @@ class GenericMutator(BaseMutator):
     def parse_input(self):
         if isinstance(self.input, str):
             print(f'[DEBUG] plaintext input is a file path')
-            try: 
+            try:
                 with open(self.input, "rb") as f:
                     self.original_input = f.read()
             except Exception as e:
@@ -58,8 +58,29 @@ class GenericMutator(BaseMutator):
 
     # chainable mutation function that applies n_mutations sequentially, building on the current state
     def mutate(self, n_mutations=10):
-        current_data = self.current_input
+        # current_data = self.current_input
+        current_data = self.original_input
 
+        lines = current_data.split(b'\n')
+        num_lines = len(lines)
+
+        full_mutation = random.choice([True, False])
+        if num_lines <= 1 or full_mutation:
+            # apply mutation on entire data
+            mutated_data = self.apply_mutations(self.current_input)
+        else:
+            # apply mutations line-by-line
+            nlines_to_mutate = random.randint(0, num_lines - 1)
+            indices_to_mutate = self.random.sample(range(num_lines), k=nlines_to_mutate)
+            for i in indices_to_mutate:
+                lines[i] = self.apply_mutations(lines[i])
+
+            mutated_data = b'\n'.join(lines)
+
+        return mutated_data
+
+    def apply_mutations(self, data, n_mutations=10):
+        current_data = data
         # sequentially apply mutations in diff categories
         for _ in range(n_mutations):
             mutation_category = self.random.choice(["byte_mutation", "structure_mutation", "insertion_mutation"])
@@ -71,6 +92,9 @@ class GenericMutator(BaseMutator):
             elif mutation_category == "insertion_mutation":
                 current_data = self.mutate_insertion(current_data)
 
+            if isinstance(current_data, str):
+                current_data = current_data.encode("latin-1", errors="ignore")
+
         self.current_input = current_data
         return current_data
 
@@ -80,16 +104,19 @@ class GenericMutator(BaseMutator):
             'bit_flip_rand',
             'bit_flip_not',
             'insert_special_bytes',
+            'replace_known_int',
             'replace_rand_bytes',
             'add_subtract_byte'
         ])
 
         if strategy == 'bit_flip_rand':
             return self.bit_flip_rand(data)
-        elif strategy == 'bit_flip_not':
-            return self.bit_flip_not(data)
-        elif strategy == 'insert_special_bytes':
-            return self.insert_special_bytes(data)
+        # elif strategy == 'bit_flip_not':
+        #     return self.bit_flip_not(data)
+        # elif strategy == 'insert_special_bytes':
+        #     return self.insert_special_bytes(data)
+        elif strategy == 'replace_known_int':
+            return self.replace_known_int(data)
         elif strategy == 'replace_rand_byte':
             return self.replace_rand_bytes(data)
         elif strategy == 'add_subtract_byte':
@@ -257,6 +284,19 @@ class GenericMutator(BaseMutator):
         ]
         boundary_value = self.random.choice(boundary_values)
         return input_data[:pos] + boundary_value + input_data[pos:]
+
+    def replace_known_int(self, input_data):
+        mutated = input_data.decode('latin-1')
+        matches = list(re.finditer(r'\d+', mutated))
+        if not matches:
+            return mutated
+
+        m = self.random.choice(matches)
+        start, end = m.start(), m.end()
+        new_int = str(self.random.choice(list(self.known_ints.values())))
+        mutated = mutated[:start] + new_int + mutated[end:]
+
+        return mutated.encode('latin-1')
 
     # replace a random number of bytes
     def replace_rand_bytes(self, input_data):
