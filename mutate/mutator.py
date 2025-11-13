@@ -58,8 +58,8 @@ class GenericMutator(BaseMutator):
 
     # chainable mutation function that applies n_mutations sequentially, building on the current state
     def mutate(self, n_mutations=10):
-        # current_data = self.current_input
-        current_data = self.original_input
+        current_data = self.current_input
+        # current_data = self.original_input
 
         lines = current_data.split(b'\n')
         num_lines = len(lines)
