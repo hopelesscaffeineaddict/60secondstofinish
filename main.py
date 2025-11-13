@@ -21,7 +21,7 @@ BINARIES_DIR = "/binaries"
 INPUTS_DIR = "/example_inputs"
 OUTPUT_DIR = "/fuzzer_output"
 
-runners = []
+processes = []
 
 def binary_process(binary_path, input_path, fuzz_time = 60):
     # event to signal runner process to stop
@@ -104,7 +104,7 @@ def binary_process(binary_path, input_path, fuzz_time = 60):
     print(f"Executions per second: {executions_per_second:.2f}")
 
 def main():
-    global runners
+    global processes
 
     print("Welcome to the 60secondstofinish Fuzzer!")
     try:
@@ -131,17 +131,15 @@ def main():
             # create new binary process
             proc = ctx.Process(target=binary_process, args=(binary, input_data, 60))
             proc.start()
+            processes.append(proc)
 
             # UNCOMMENT: if you want to run binaries sequentially
             # runners.append(proc)
 
         # stop each runner (wait for processes/threads to complete safely)
-        for runner in runners:
-            runner.join()
+        for proc in processes:
+            proc.join()
 
-            # # NOTE: if there's multiple threads/binary, similar to note in Runner,
-            # # we might have to add some kinda feature that groups threads together based on binary
-            # # and outputs aggregate/avg stats for each group of threads.
     except Exception as e:
         print(f"Error during fuzzing: {e}")
         sys.exit(1)

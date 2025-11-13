@@ -36,6 +36,7 @@ class GenericMutator(BaseMutator):
         super().__init__(example_input, input_queue, stop_event, binary_name, max_queue_size)
         print(example_input)
 
+        self.ith_mutation = 0
         self.original_input = None
         self.current_input = None
         self.parse_input()
@@ -57,9 +58,13 @@ class GenericMutator(BaseMutator):
         self.current_input = self.original_input
 
     # chainable mutation function that applies n_mutations sequentially, building on the current state
-    def mutate(self, n_mutations=10):
-        current_data = self.current_input
-        # current_data = self.original_input
+    def mutate(self):
+        if (self.ith_mutation == 10):
+            current_data = self.original_input
+            self.ith_mutation = 0
+        else:
+            current_data = self.current_input
+        current_data = self.original_input
 
         lines = current_data.split(b'\n')
         num_lines = len(lines)
@@ -78,6 +83,8 @@ class GenericMutator(BaseMutator):
 
             mutated_data = b'\n'.join(lines)
 
+        self.current_input = mutated_data
+        self.ith_mutation += 1
         return mutated_data
 
     def apply_mutations(self, data, n_mutations=10):
@@ -93,10 +100,6 @@ class GenericMutator(BaseMutator):
             elif mutation_category == "insertion_mutation":
                 current_data = self.mutate_insertion(current_data)
 
-            # if isinstance(current_data, str):
-            #     current_data = current_data.encode("latin-1", errors="ignore")
-
-        self.current_input = current_data
         return current_data
 
     # byte lvl mutations
@@ -317,8 +320,10 @@ class GenericMutator(BaseMutator):
 
    # Add or subtract a small random value.
     def add_subtract_byte(self, input: bytes) -> bytes:
-        # TODO: change to use actual input once context awareness is added
-        mutated = bytearray(self.original_input)
+        if not input:
+            return input
+
+        mutated = bytearray(input)
         i = random.randint(0, len(mutated) - 1)
         increment = random.randint(1, 32)
         if random.choice([True, False]):
