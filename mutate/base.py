@@ -25,26 +25,25 @@ class BaseMutator(threading.Thread):
         # create mutated input dir if it doesn't exist
         base_dir = os.path.abspath(os.getcwd())
         mutated_dir = os.path.join(base_dir, "mutated_inputs")
-        print(f'[DEBUG]: mutated dir: {mutated_dir}')
+        # print(f'[DEBUG]: mutated dir: {mutated_dir}')
         os.makedirs(mutated_dir, exist_ok=True)
 
         # create output dir for execution logs 
         output_dir = os.path.join(base_dir, "fuzzer_output")
-        print(f'[DEBUG]: fuzzer output dir: {output_dir}')
+        # print(f'[DEBUG]: fuzzer output dir: {output_dir}')
         os.makedirs(output_dir, exist_ok=True)
 
         # setup mutation log file 
         logfile_path = os.path.join(mutated_dir, f"mutated_{binary_name}.txt")
-        print(f'[DEBUG]: mutation log path: {logfile_path}')
+        # print(f'[DEBUG]: mutation log path: {logfile_path}')
         self.log_file = open(logfile_path, "wb")
         # self.log_file.write(f"example_input: {input}".encode())
         self.log_file.write(f"Mutation log for {binary_name}\n".encode('utf-8'))
         self.log_file.write(f"Started at {time.strftime('%Y-%m-%d %H:%M:%S')}\n\n".encode('utf-8'))
 
-
         # setup execution log file 
         output_path = os.path.join(output_dir, f"{binary_name}_execution_log.txt")
-        print(f'[DEBUG]: exec log path: {output_path}')
+        # print(f'[DEBUG]: exec log path: {output_path}')
         self.exec_log_file = open(output_path, "w")
         self.exec_log_file.write(f"Execution log for {binary_name}\n")
         self.exec_log_file.write(f"Started at {time.strftime('%Y-%m-%d %H:%M:%S')}\n\n")

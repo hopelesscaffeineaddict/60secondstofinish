@@ -63,27 +63,23 @@ class GenericMutator(BaseMutator):
         self.current_input = self.original_input
         self.check_if_numeric()
 
-        print(f'[DEBUG] Password Protection for {self.binary_name}: {self.protect_first_line}')
-
-    # Set password protection flag from runner
+    # set password protection flag from runner
     def set_password_protection(self, protect_first_line):
         self.protect_first_line = protect_first_line
-        print(f'[DEBUG3]: Protect first line for {self.binary_name}: {self.protect_first_line}')
+        # print(f'[DEBUG3]: Protect first line for {self.binary_name}: {self.protect_first_line}')
         if protect_first_line:
             try:
                 self.first_line_end = self.original_input.index(b'\n')
-                print(f'[DEBUG] Password protection for {self.binary_name} enabled, first line ends at position {self.first_line_end}')
                 self.protect_first_line = True 
                 print(f'[DEBUG2] Password Protection for {self.binary_name}: {self.protect_first_line}')
             except ValueError:
-                # No newline found, treat entire input as first line
                 self.first_line_end = len(self.original_input)
                 print('[DEBUG] No newline found, treating entire input as first line')
 
     # Check whether non protected input contains numeric content
     def check_if_numeric(self):
         try:
-            # Try to decode as UTF-8 to check for numeric content
+            # decode as UTF-8 to check for numeric content
             content = self.original_input.decode('utf-8')
             
             # Split by lines and check if most content is numeric
@@ -91,32 +87,27 @@ class GenericMutator(BaseMutator):
             numeric_lines = 0
             total_lines = 0
             
-            for i, line in enumerate(lines):
-                # Skip the first line if it's protected (password)
-                if self.protect_first_line and i == 0:
-                    continue
-                    
-                if line.strip():
-                    total_lines += 1
-                    if re.match(r'^-?\d+$', line.strip()):
-                        numeric_lines += 1
+            index = 0
+            if self.protect_first_line:
+                index = 1
             
-            # If more than 70% of non-empty lines are numeric, consider it numeric
-            if total_lines > 0 and (numeric_lines / total_lines) > 0.7:
-                self.is_numeric = True
-                print('[DEBUG] Input detected as primarily numeric')
+            for index, line, in enumerate(lines):
+                # print(f'[DEBUG] is_numeric index: {index}, {line}')
+
+                if re.match(r'^-?\d+$', line.strip()):
+                    print(f'[DEBUG] Input for {self.binary_name} detected as primarily numeric. Line content: {line}')
+                    self.is_numeric = True 
         except UnicodeDecodeError:
             pass
 
     # chainable mutation function that applies n_mutations sequentially, building on the current state
     def mutate(self, n_mutations=10):
-        # print(f'[DEBUG] Password Protection for {self.binary_name}: {self.protect_first_line}')
         current_data = self.current_input
+        # print(f'[DEBUG] Current data for {self.binary_name}: {current_data}')
         # print(current_data)
 
-        # If we have password protection, only mutate after the first line
+        # skip first line if password protected
         if self.protect_first_line:
-            # print(f'DEBUG: Password protected, skipping mutation of first line')
             # Split into first line and rest
             parts = current_data.split(b'\n', 1)
             password = parts[0] + b'\n'
@@ -133,23 +124,16 @@ class GenericMutator(BaseMutator):
                 elif mutation_type == "insertion_mutation":
                     remainder = self.mutate_insertion(remainder)
             
-            # Reassemble with original first line
-            # try:
-            #     pw_str = password.decode('utf-8', errors='replace')
-            #     rem_str = remainder.decode('utf-8', errors='replace')
-            #     print(f"[DEBUG] Checking password: {pw_str!r}")
-            #     print(f"[DEBUG] Checking remainder: {rem_str!r}")
-            # except Exception as e:
-            #     print(f'[DEBUG] EXCEPTION')
-            #     print(f"[DEBUG] Decode error during print: {e}")
-            #     print(f"[DEBUG] Raw password bytes: {password[:100]!r}")
-            #     print(f"[DEBUG] Raw remainder bytes: {remainder[:100]!r}")
-            
             current_data = password + remainder
+
         # If input is numeric, use numeric mutations
-        elif self.is_numeric:
+        if self.is_numeric:
+            # print(f'[DEBUG] Using numeric mutations for {self.binary_name}')
+            # print(current_data.decode('utf-8', errors='backslashreplace'))
             for _ in range(n_mutations):
-                current_data = self.mutate_numeric(current_data)
+                # current_data = self.mutate_numeric(current_data)
+                current_data = self.arithmetic_mutation(current_data)
+
         # Otherwise, use all mutation types
         else:
             for _ in range(n_mutations):
@@ -165,62 +149,28 @@ class GenericMutator(BaseMutator):
         self.current_input = current_data
         return current_data
 
-    # mutations for numeric data
-    def mutate_numeric(self, data):
-        """Apply mutations specific to numeric data"""
-        strategy = self.random.choice([
-            'insert_known_int',
-            'bit_flip_numeric',
-            'insert_boundary_values',
-            'arithmetic_mutation',
-        ])
-        
-        if strategy == 'insert_known_int':
-            return self.insert_known_int(data)
-        elif strategy == 'bit_flip_numeric':
-            return self.bit_flip_numeric(data)
-        elif strategy == 'insert_boundary_values':
-            return self.insert_boundary_values(data)
-        elif strategy == 'arithmetic_mutation':
-            return self.arithmetic_mutation(data)
-        
-        return data
-
     # arithmetic mutations 
     def arithmetic_mutation(self, data):
         try:
-            # decode as utf 8 to work w text
             content = data.decode('utf-8')
             lines = content.split('\n')
-            
-            # pick random line to mutate, skip first line if protected
-            start_idx = 0
-            if self.protect_first_line:
-                start_idx = 1
+            start_idx = 1 if self.protect_first_line else 0
+            candidates = [i for i, l in enumerate(lines[start_idx:], start_idx) if re.match(r'^-?\d+$', l.strip())]
+            if not candidates:
+                return data
 
-            if lines[start_idx:]:
-                line_idx = self.random.randint(start_idx, len(lines) - 1)
-                line = lines[line_idx].strip()
-                
-                # Check if the line is numeric
-                if re.match(r'^-?\d+$', line):
-                    try:
-                        num = int(line)
-                        # Apply a simple arithmetic operation
-                        op = self.random.choice([50, -50, 100, -100, 1000, -1000, 2000, -2000])
-                        new_num = num + op
-                        
-                        lines[line_idx] = str(new_num)
-                        
-                        # Re-encode and return
-                        return '\n'.join(lines).encode('utf-8')
-                    except (ValueError, ZeroDivisionError):
-                        pass
-        except UnicodeDecodeError:
-            pass
-        
-        # Fallback to regular mutations if numeric parsing fails
-        return self.insert_known_int(data)
+            line_idx = self.random.choice(candidates)
+            old_num = int(lines[line_idx])
+            delta = self.random.choice([50, -50, 100, -100, 1000, -1000, -10000])
+            new_num = old_num + delta
+            lines[line_idx] = str(new_num)
+
+            # print(f"[DEBUG] arithmetic mutation: line {line_idx} old {old_num}: new {new_num}")
+            return '\n'.join(lines).encode('utf-8')
+
+        except Exception:
+            return data
+
 
     # Simplified bit flip mutation for numeric data
     def bit_flip_numeric(self, data):
@@ -445,3 +395,26 @@ class GenericMutator(BaseMutator):
         ]
         boundary_value = random.choice(boundary_values)
         return input_data[:pos] + boundary_value + input_data[pos:]
+
+
+    ### might delete later if unused
+    # mutations for numeric data
+    # def mutate_numeric(self, data):
+    #     """Apply mutations specific to numeric data"""
+    #     strategy = self.random.choice([
+    #         'insert_known_int',
+    #         'bit_flip_numeric',
+    #         'insert_boundary_values',
+    #         'arithmetic_mutation',
+    #     ])
+        
+    #     if strategy == 'insert_known_int':
+    #         return self.insert_known_int(data)
+    #     elif strategy == 'bit_flip_numeric':
+    #         return self.bit_flip_numeric(data)
+    #     elif strategy == 'insert_boundary_values':
+    #         return self.insert_boundary_values(data)
+    #     elif strategy == 'arithmetic_mutation':
+    #         return self.arithmetic_mutation(data)
+        
+    #     return data
