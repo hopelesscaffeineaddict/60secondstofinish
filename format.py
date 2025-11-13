@@ -32,7 +32,7 @@ def format_type(example_input_file: str) -> FormatType:
 
 # Determines the format type from a byte string
 def get_format_from_bytes(input_data: bytes) -> FormatType:
-    
+
     input_slice = input_data[:2048]
 
     if is_json(input_slice):

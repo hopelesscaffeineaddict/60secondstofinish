@@ -117,7 +117,7 @@ def main():
         if not matches:
             print("No binary-to-input matches found. Exiting.")
             sys.exit(1)
-            
+
         ctx = mp.get_context("spawn")
 
         # iterate over all binaries in the binary folder

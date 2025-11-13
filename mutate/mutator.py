@@ -7,7 +7,7 @@ import os
 from format import format_type, FormatType
 from .base import BaseMutator
 
-# Generic mutation strategies 
+# Generic mutation strategies
 class GenericMutator(BaseMutator):
     known_ints = {
         "CHAR_MAX": 255,
@@ -59,11 +59,11 @@ class GenericMutator(BaseMutator):
     # chainable mutation function that applies n_mutations sequentially, building on the current state
     def mutate(self, n_mutations=10):
         current_data = self.current_input
-        
+
         # sequentially apply mutations in diff categories
         for _ in range(n_mutations):
             mutation_category = self.random.choice(["byte_mutation", "structure_mutation", "insertion_mutation"])
-            
+
             if mutation_category == "byte_mutation":
                 current_data = self.mutate_bytes(current_data)
             elif mutation_category == "structure_mutation":
@@ -79,16 +79,22 @@ class GenericMutator(BaseMutator):
         strategy = self.random.choice([
             'bit_flip_rand',
             'bit_flip_not',
-            'insert_special_bytes'
+            'insert_special_bytes',
+            'replace_rand_bytes',
+            'add_subtract_byte'
         ])
-        
+
         if strategy == 'bit_flip_rand':
             return self.bit_flip_rand(data)
         elif strategy == 'bit_flip_not':
             return self.bit_flip_not(data)
         elif strategy == 'insert_special_bytes':
             return self.insert_special_bytes(data)
-        
+        elif strategy == 'replace_rand_byte':
+            return self.replace_rand_bytes(data)
+        elif strategy == 'add_subtract_byte':
+            return self.add_subtract_byte(data)
+
         return data
 
     # randomly apply structural mutations
@@ -99,7 +105,7 @@ class GenericMutator(BaseMutator):
             'swap_bytes',
             # 'reverse_segment'
         ])
-        
+
         if strategy == 'delete_rand_char':
             return self.delete_rand_char(data)
         elif strategy == 'splice_bits':
@@ -108,7 +114,7 @@ class GenericMutator(BaseMutator):
             return self.swap_bytes(data)
         # elif strategy == 'reverse_segment':
         #     return self.reverse_segment(data)
-        
+
         return data
 
     # randomly apply insertion mutations
@@ -120,7 +126,7 @@ class GenericMutator(BaseMutator):
             'insert_random_string',
             'insert_boundary_values'
         ])
-        
+
         if strategy == 'insert_rand_char':
             return self.insert_rand_char(data)
         # elif strategy == 'insert_rand_large_char':
@@ -131,7 +137,7 @@ class GenericMutator(BaseMutator):
             return self.insert_random_string(data)
         elif strategy == 'insert_boundary_values':
             return self.insert_boundary_values(data)
-        
+
         return data
 
     """Delete a random characters from input"""
@@ -147,7 +153,7 @@ class GenericMutator(BaseMutator):
         pos = random.randrange(len(input) + 1)
         random_byte = os.urandom(1)
         return input[:pos] + random_byte + input[pos:]
-    
+
     """Insert large number of characters into input"""
     def insert_rand_large_char(self, input: bytes) -> bytes:
         pos = random.randrange(len(input) + 1)
@@ -158,7 +164,7 @@ class GenericMutator(BaseMutator):
     def insert_known_int(self, input: bytes) -> bytes:
         num = random.choice(list(self.known_ints.values()))
         pos = random.randrange(len(input) + 1)
-        
+
         # check n_bytes needed based on value
         if num <= 0xFF:
             byte_length = 1
@@ -168,16 +174,16 @@ class GenericMutator(BaseMutator):
             byte_length = 4
         else:
             byte_length = 8
-        
+
         try:
             num_bytes = num.to_bytes(byte_length, 'big')
             return input[:pos] + num_bytes + input[pos:]
         except OverflowError:
             # fallback to a smaller value if conversion fails
-            fallback_num = 0xFFFFFFFF   
+            fallback_num = 0xFFFFFFFF
             num_bytes = fallback_num.to_bytes(4, 'big')
             return input[:pos] + num_bytes + input[pos:]
-    
+
     """Twos complement bit flip of input"""
     def bit_flip_not(self, input: bytes) -> bytes:
         if not input:
@@ -194,7 +200,7 @@ class GenericMutator(BaseMutator):
         bit_pos = random.randrange(8)
         new_byte = input[pos] ^ (1 << bit_pos)
         return input[:pos] + bytes([new_byte]) + input[pos + 1:]
-    
+
     """Splice random size of bytes from input at a random position"""
     def splice_bits(self, input: bytes) -> bytes:
         if len(input) < 2:
@@ -208,25 +214,25 @@ class GenericMutator(BaseMutator):
         return input[:insert_at] + segment + input[insert_at:]
 
     # insert special bytes randomly
-    def insert_special_bytes(self, input_data: bytes): 
+    def insert_special_bytes(self, input_data: bytes):
         if not input_data:
             return input_data
         pos = self.random.randrange(len(input_data) + 1)
         special_byte = self.random.choice(self.special_bytes)
-        return input_data[:pos] + special_byte + input_data[pos:]   
+        return input_data[:pos] + special_byte + input_data[pos:]
 
     # STRUCTURAL MUTATIONS
     # randomly swap two bytes
     def swap_bytes(self, input_data: bytes) -> bytes:
         if len(input_data) < 2:
             return input_data
-        
+
         pos1 = self.random.randrange(len(input_data))
         pos2 = self.random.randrange(len(input_data))
-        
+
         data = bytearray(input_data)
         data[pos1], data[pos2] = data[pos2], data[pos1]
-        
+
         return bytes(data)
 
     # STRING INSERTION STRATEGIES
@@ -236,7 +242,7 @@ class GenericMutator(BaseMutator):
         length = self.random.randint(5, 50)
         random_string = ''.join(self.random.choices(
             'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+-=[]{}|;:,.<>?', k=length))
-        return input_data[:rand_length] + random_string.encode('ascii') + input_data[rand_length:]   
+        return input_data[:rand_length] + random_string.encode('ascii') + input_data[rand_length:]
 
     # insert boundary values
     def insert_boundary_values(self, input_data):
@@ -251,3 +257,27 @@ class GenericMutator(BaseMutator):
         ]
         boundary_value = self.random.choice(boundary_values)
         return input_data[:pos] + boundary_value + input_data[pos:]
+
+    # replace a random number of bytes
+    def replace_rand_bytes(self, input_data):
+        mutated = bytearray(input_data)
+        input_len = len(mutated)
+        nbytes_to_replace = self.random.randrange(input_len)
+        for i in range(nbytes_to_replace):
+            i = self.random.randrange(input_len)
+            new_byte = self.random.randint(0, 255)
+            mutated[i] = new_byte
+
+        return bytes(mutated)
+
+   # Add or subtract a small random value.
+    def add_subtract_byte(self, input_data):
+        mutated = bytearray(self.original_input)
+        i = random.randint(0, len(mutated) - 1)
+        increment = random.randint(1, 32)
+        if random.choice([True, False]):
+            mutated[i] = (mutated[i] + increment) % 256
+        else:
+            mutated[i] = (mutated[i] - increment) % 256
+
+        return bytes(mutated)
