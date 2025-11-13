@@ -111,10 +111,10 @@ class GenericMutator(BaseMutator):
 
         if strategy == 'bit_flip_rand':
             return self.bit_flip_rand(data)
-        # elif strategy == 'bit_flip_not':
-        #     return self.bit_flip_not(data)
-        # elif strategy == 'insert_special_bytes':
-        #     return self.insert_special_bytes(data)
+        elif strategy == 'bit_flip_not':
+            return self.bit_flip_not(data)
+        elif strategy == 'insert_special_bytes':
+            return self.insert_special_bytes(data)
         elif strategy == 'replace_known_int':
             return self.replace_known_int(data)
         elif strategy == 'replace_rand_byte':
