@@ -28,3 +28,5 @@ echo '{"0":-19001020089231092381092830193801923,"1":1,"2":2,"3":3,"4":4,"5":5,"6
 ~/60secondstofinish/binaries/json1 < ~/60secondstofinish/fuzzer_output/bad_json1.txt
 ~/60secondstofinish/binaries/json2 < ~/60secondstofinish/fuzzer_output/bad_json2.txt
 ~/60secondstofinish/binaries/plaintext1 < ~/60secondstofinish/fuzzer_output/bad_plaintext1.txt
+
+~/60secondstofinish/binaries/plaintext3 < ~/60secondstofinish/plaintext_test.txt

@@ -84,8 +84,12 @@ class BaseMutator(threading.Thread):
     # log mutations for diff input types
     def log_mutation(self, mutations_done, mutated_input):
         if isinstance(mutated_input, bytes):
-            # utf8 for byte strings
-            log_content = f"{mutations_done}: {mutated_input.decode('utf-8')}\n"
+            try:
+                # utf 8 for byte strings 
+                log_content = f"{mutations_done}: {mutated_input.decode('utf-8')}\n"
+            except UnicodeDecodeError:
+                # fallback to hex representation if decode fails
+                log_content = f"{mutations_done}: {mutated_input.hex()}\n"
         elif isinstance(mutated_input, str):
             #  directly log string inputs
             log_content = f"{mutations_done}: {mutated_input}\n"
@@ -105,7 +109,7 @@ class BaseMutator(threading.Thread):
                 
                 # diff input types for logging
                 if isinstance(input_data, bytes):
-                    input_repr = input_data.decode('utf-8')
+                    input_repr = input_data.decode('utf-8', errors='backslashreplace')
                 elif isinstance(input_data, str):
                     input_repr = input_data
                 else:

@@ -7,6 +7,25 @@ import time
 import signal
 from models import ExecutionResult, CrashType
 
+# Password check stuff
+password_keywords = [
+    r'password', r'Password', r'Password required', r'Invalid password', r'Incorrect password', 
+    r'Login', r'login', r'enter password', r'Enter password', r'authentication', r'Auth', r'auth'
+]
+
+password_pattern = re.compile('|'.join(password_keywords), re.IGNORECASE)
+
+# Checks if program has a password check by matching stdout to list of password keywords
+def check_if_password_prompt(stdout: str):
+    if not stdout:
+        return False
+
+    if password_pattern.search(stdout):
+        # print(f'[DEBUG] Password prompt detected: {password_pattern.search(stdout)}')
+        return True 
+
+    return False 
+
 class Runner(threading.Thread):
     def __init__(self, binary_path, input_queue, crash_handler, stop_event, mutator, timeout=2.0):
         super().__init__(daemon=True)
@@ -17,8 +36,15 @@ class Runner(threading.Thread):
         self.timeout = timeout
         self.stats = {"total_executions": 0}
         self.mutator = mutator
+        self.password_detected = False 
 
     def run(self):
+        # Run binary to detect password prompts and update mutator flag if password prompt detected 
+        self.detect_password_prompt()
+
+        if hasattr(self.mutator, 'set_password_protection'):
+            self.mutator.set_password_protection(self.password_detected)
+
         while not self.stop_event.is_set():
             # attempt to retrieve a new mutated input from the shared input queue
             try:
@@ -38,6 +64,28 @@ class Runner(threading.Thread):
                     self.crash_handler.crashes.append({"result": result, "input": input_data})
                     self.crash_handler.condition.notify()
 
+    # run binary with OG input to detect password prompt
+    def detect_password_prompt(self):
+        try: 
+            original_input = self.mutator.original_input
+
+            proc = subprocess.Popen(
+                [self.binary_path],
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                preexec_fn=os.setsid
+            )
+
+            stdout, stderr = proc.communicate(input=original_input, timeout=self.timeout)
+            stdout_str = stdout.decode('utf-8', errors='ignore')
+            
+            # Check for password keywords in stdout
+            self.password_detected = check_if_password_prompt(stdout_str)
+            
+        except Exception as e:
+            print(f"[DEBUG] Error detecting password prompt: {e}")
+
     def execute_input(self, input_data: bytes) -> ExecutionResult:
         start_time = time.time()
         try:
@@ -56,6 +104,10 @@ class Runner(threading.Thread):
                 execution_time = time.time() - start_time
                 return_code = proc.returncode
                 crash_info = self.analyse_crash(return_code, stderr, execution_time)
+
+                stdout_str = stdout.decode("utf-8", errors="ignore")
+                password_prompt = check_if_password_prompt(stdout_str)
+
                 return ExecutionResult(
                     return_code = return_code,
                     stdout = stdout,
@@ -103,7 +155,6 @@ class Runner(threading.Thread):
                 return crash_type
 
         # better crash analysis w pattern matching from models.py
-        # i really don't know if this works i'm just throwing shit at the wall
         stderr_str = stderr.decode("utf-8", errors="ignore").lower()
         crash_patterns = {
             "stack smashing": CrashType.STACKSMASH,
