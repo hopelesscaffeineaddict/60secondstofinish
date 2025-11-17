@@ -39,9 +39,11 @@ int main(int argc, char *argv[]) {
     int timeout_seconds = atoi(argv[1]);
     char *binary_path = argv[2];
 
-    // create pipe to be able to redirect binary stdin
-    int proc_pipe[2];
-    if (pipe(proc_pipe) == -1) {
+    // create pipe to be able to redirect binary stdin/stdout/stderr and harness stdin/stdout/stderr
+    int stdin_pipe[2];      // pipe[0] == write to binary, pipe[1] == read from harness
+    int stdout_pipe[2];     // pipe[0] == read from binary, pipe[1] == write to harness stdout
+    int stderr_pipe[2];     // pipe[0] == read child stderr, pipe[1] == write to harness stderr
+    if (pipe(stdin_pipe) || pipe(stdout_pipe) || pipe(stderr_pipe)) {
         perror("pipe");
         return 1;
     }
@@ -56,11 +58,18 @@ int main(int argc, char *argv[]) {
     if (child_pid == 0) {
         // child process (will run the binary)
 
-        // close write end of pipe (we only care about read end)
-        close(proc_pipe[1]);
-        // redirect stdin to read from pipe
-        dup2(proc_pipe[0], STDIN_FILENO);
-        close(proc_pipe[0]);
+        // close unused pipe ends
+        close(stdin_pipe[1]);
+        close(stdout_pipe[0]);
+        close(stderr_pipe[0]);
+
+        // redirect stdio and close duplicate pipes (only need one)
+        dup2(stdin_pipe[0], STDIN_FILENO);
+        dup2(stdout_pipe[1], STDOUT_FILENO);
+        dup2(stderr_pipe[1], STDERR_FILENO);
+        close(stdin_pipe[0]);
+        close(stdout_pipe[1]);
+        close(stderr_pipe[1]);
 
         // allow parent to attach to process
         ptrace(PTRACE_TRACEME, 0, NULL, NULL);
@@ -76,8 +85,10 @@ int main(int argc, char *argv[]) {
         int status;
         struct user_regs_struct regs;
 
-        // parent proc will only be writing
-        close(proc_pipe[0]);
+        // close unused pipe ends
+        close(stdin_pipe[0]);
+        close(stdout_pipe[1]);
+        close(stderr_pipe[1]);
 
         // set up a timeout
         signal(SIGALRM, timeout_handler);
@@ -87,7 +98,7 @@ int main(int argc, char *argv[]) {
         char buffer[BUFFER_LEN];
         ssize_t nbyte;
         while ((nbyte = read(STDIN_FILENO, buffer, BUFFER_LEN)) > 0) {
-            if (write(pipe_to_child[1], buffer, nbyte) != nbyte) {
+            if (write(stdin_pipe[1], buffer, nbyte) != nbyte) {
                 // failed to write all of the input to program stdin
                 break;
             }

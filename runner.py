@@ -52,27 +52,71 @@ class Runner(threading.Thread):
             )
 
             # give the harness extra time to run (as ptrace is quite slow)
-            stdout, stderr = proc.communicate(input=input_data, timeout=self.timeout + 1)
+            try:
+                stdout, stderr = proc.communicate(input=input_data, timeout=self.timeout + 1)
+
+            except subprocess.TimeoutExpired:
+                # c harness timeout (something went wrong in harness not binary)
+                proc.kill()
+                stdout, stderr = proc.communicate()
+                return ExecutionResult(
+                    return_code = -2,
+                    stdout = stdout,
+                    stderr = stderr,
+                    execution_time = time.time() - start_time,
+                    crashed = False,
+                    crash_type = CrashType.HARNESS_ERR,
+                    signal = None,
+                )
+
             execution_time = time.time() - start_time
             return_code = proc.returncode
 
             # TODO: parse the harness results
             self.parse_harness_results(return_code, stdout, stderr, execution_time)
 
-            # crash_info = self.analyse_crash(return_code, stderr, execution_time)
-            # return ExecutionResult(
-            #     return_code = return_code,
-            #     stdout = stdout,
-            #     stderr = stderr,
-            #     execution_time = execution_time,
-            #     crashed = crash_info is not None,
-            #     crash_type = crash_info if crash_info else None,
-            #     signal = self.extract_signal_from_stderr(stderr),
-            # )
-        except subprocess.TimeoutExpired:
-            pass
+        except Exception as e:
+            return ExecutionResult(
+                return_code = -2,
+                stdout = stdout,
+                stderr = stderr,
+                execution_time = time.time() - start_time,
+                crashed = False,
+                crash_type = CrashType.HARNESS_ERR,
+                signal = None,
+            )
 
     def parse_harness_results(self, return_code: int, stdout: bytes, stderr: bytes, execution_time: float):
+        stdout_str = stdout.decode("utf-8", errors="ignore").strip()
+        stderr_str = stderr.decode("utf-8", errors="ignore").strip()
+
+        crashed = False
+        crash_type = None
+        signal = None
+
+        if stdout_str:
+            harness_result = {}
+            try:
+                # if a crash occurred, a key value pair would've been printed to stdout
+                # e.g. "crash_type:crash|signal:1"
+                results = stdout_str.split('|')
+                for result in results:
+                    key, value = result.split(':', 1)
+                    harness_result[key.strip()] = value.strip()
+            except ValueError:
+                # TODO: dont know how I want to handle this error atm
+                pass
+
+            harness_crash_type = harness_result.get('crash_type')
+            if harness_crash_type == 'timeout':
+                crashed = True
+                crash_type = CrashType.TIMEOUT
+                signal = int(harness_result.get('signal', 0))
+            elif harness_crash_type == 'crash':
+                # TODO: need to adjust harness to still capture binary stdout/stderr
+                crashed = True
+                crash_type = self.signal_to_crash_type()
+                signal = int(harness_result.get('signal', 0))
         pass
 
     # def execute_input(self, input_data: bytes) -> ExecutionResult:

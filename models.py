@@ -11,6 +11,7 @@ class CrashType(Enum):
     INVALID_WRITE = "invalid_write"
     INVALID_READ = "invalid_read"
     TIMEOUT = "timeout"
+    HARNESS_ERR = "harness_err"
     UNKNOWN = "unknown"
 
 # Data structure for holding execution results
