@@ -19,8 +19,8 @@ class ExecutionResult:
     def __init__(
         self,
         return_code: int,
-        stdout: bytes,
-        stderr: bytes,
+        stdout: str,
+        stderr: str,
         execution_time: float,
         crashed: bool = False,
         crash_type: Optional[CrashType] = None,

@@ -28,8 +28,6 @@ void timeout_handler(int signal) {
         // kill child process if still live
         kill(child_pid, SIGKILL);
     }
-
-    fprintf(stdout, "CRASH_TYPE:timeout|SIGNAL:%d", signal);
 }
 
 int main(int argc, char *argv[]) {
@@ -114,21 +112,39 @@ int main(int argc, char *argv[]) {
         fcntl(stdout_pipe[0], F_SETFL, O_NONBLOCK);
         fcntl(stderr_pipe[0], F_SETFL, O_NONBLOCK);
 
-        char outbuf[BUFFER_LEN];
-        char errbuf[BUFFER_LEN];
+        char *out = NULL;
+        ssize_t out_len = 0;
+        ssize_t out_cap = 0;
+        char *err = NULL;
+        ssize_t err_len = 0;
+        ssize_t err_cap = 0;
+
         // tracer loop
         while (WIFSTOPPED(status)) {
             // capture binary/child stdout
             ssize_t n;
-            while ((n = read(stdout_pipe[0], outbuf, BUFFER_LEN)) > 0) {
-                write(STDOUT_FILENO, "STDOUT:", 7);
-                write(STDOUT_FILENO, outbuf, n);
+            char tmp[BUFFER_LEN];
+            while ((n = read(stdout_pipe[0], tmp, BUFFER_LEN)) > 0) {
+                if (out_len + n + 1 > out_cap) {
+                    out_cap = (out_cap + n + 1) * 2 + 1024;
+                    out = realloc(out, out_cap);
+                }
+                if (out) {
+                    memcpy(out + out_len, tmp, n);
+                    out_len += n;
+                }
             }
 
             // capture binary/child stderr
-            while ((n = read(stderr_pipe[0], errbuf, BUFFER_LEN)) > 0) {
-                write(STDERR_FILENO, "STDERR:", 7);
-                write(STDERR_FILENO, errbuf, n);
+            while ((n = read(stderr_pipe[0], tmp, BUFFER_LEN)) > 0) {
+                if (err_len + n + 1 > err_cap) {
+                    err_cap = (err_cap + n + 1) * 2 + 1024;
+                    err = realloc(err, err_cap);
+                }
+                if (err) {
+                    memcpy(err + err_len, tmp, n);
+                    err_len += n;
+                }
             }
 
             if (ptrace(PTRACE_GETREGS, child_pid, NULL, &regs) == -1) {
@@ -152,30 +168,43 @@ int main(int argc, char *argv[]) {
             }
         }
 
-        write(STDOUT_FILENO, "|", 1);
-        write(STDERR_FILENO, "|", 1);
+        if (out) {
+            out[out_len] = '\0';
+            fprintf(stdout, "STDOUT:%s|", out);
+            free(out);
+        }
+
+        if (err) {
+            err[err_len] = '\0';
+            fprintf(stdout, "STDERR:%s|", err);
+            free(err);
+        }
 
         // disable queued timeout
         alarm(0);
 
         // record results for crash handler to analyse
-        if (WIFSIGNALED(status) || (WIFSTOPPED(status) && WSTOPSIG(status) != SIGTRAP)) {
-            int signal = WIFSIGNALED(status) ? WTERMSIG(status) : WSTOPSIG(status);
-            fprintf(stdout, "CRASH_TYPE:crash|SIGNAL:%d", signal);
+        if (WIFSIGNALED(status)) {
+            int sig = WTERMSIG(status);
+            if(sig == SIGKILL) {
+                fprintf(stdout, "CRASH_TYPE:timeout|SIGNAL:%d", sig);
+            } else {
+                fprintf(stdout, "CRASH_TYPE:crash|SIGNAL:%d", sig);
+            }
         } else {
-            fprintf(stdout, "CRASH_TYPE:none|signal:0");
+            fprintf(stdout, "CRASH_TYPE:none|SIGNAL:0");
         }
 
         // record the coverage results
-        fprintf(stdout, "|coverage:");
+        fprintf(stdout, "|COVERAGE:");
         bool first_cov = true;
         for (int i = 0; i < MAX_COVERAGE_SIZE; i++) {
             if (coverage_bitmap[i]) {
                 if (!first_cov) {
                     fprintf(stdout, ",");
-                    first_cov = false;
                 }
                 fprintf(stdout, "%x", i);
+                first_cov = false;
             }
         }
 

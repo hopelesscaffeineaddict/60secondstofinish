@@ -45,7 +45,7 @@ class Runner(threading.Thread):
         try:
             # create subprocess for the c harness to run and detect coverage
             proc = subprocess.Popen(
-                [harness, self.timeout, self.binary_path],
+                [harness, str(self.timeout), self.binary_path],
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
@@ -53,12 +53,12 @@ class Runner(threading.Thread):
 
             # give the harness extra time to run (as ptrace is quite slow)
             try:
+                input_data = b'{"len": -1, "input": "AAAABBBBCCCC","more_data": ["a", "bb"]}'
                 stdout, stderr = proc.communicate(input=input_data, timeout=self.timeout + 1)
 
             except subprocess.TimeoutExpired:
                 # c harness timeout (something went wrong in harness not binary)
                 proc.kill()
-                stdout, stderr = proc.communicate()
                 return ExecutionResult(
                     return_code = -2,
                     stdout = stdout,
@@ -72,7 +72,7 @@ class Runner(threading.Thread):
             execution_time = time.time() - start_time
             return_code = proc.returncode
             # TODO: parse the harness results
-            self.parse_harness_results(return_code, stdout, stderr, execution_time)
+            return self.parse_harness_results(return_code, stdout, execution_time)
 
         except Exception as e:
             return ExecutionResult(
@@ -85,16 +85,17 @@ class Runner(threading.Thread):
                 signal = None,
             )
 
-    def parse_harness_results(self, return_code: int, stdout: bytes, stderr: bytes, execution_time: float):
+    def parse_harness_results(self, return_code: int, stdout: bytes, execution_time: float):
         stdout_str = stdout.decode("utf-8", errors="ignore").strip()
-        stderr_str = stderr.decode("utf-8", errors="ignore").strip()
 
         harness_result = {}
+        results = []
 
         if stdout_str:
             try:
                 # parse all the binary run details from the harness
-                results = stdout_str.split('|') + stderr_str.split('|')
+                # print(results)
+                results = stdout_str.split('|')
                 for result in results:
                     key, value = result.split(':', 1)
                     if key.strip() in harness_result:
@@ -113,6 +114,10 @@ class Runner(threading.Thread):
             binary_stderr = harness_result.get('STDERR', '')
             coverage_str = harness_result.get("COVERAGE", '')
             coverage = {int(c, 16) for c in coverage_str.split(',') if c} if coverage_str else None
+
+            print(signal)
+            print(binary_stdout)
+            print(binary_stderr)
 
             found_crash_type = None
             if crash_type == 'none':

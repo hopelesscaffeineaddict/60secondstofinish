@@ -121,11 +121,15 @@ class BaseMutator(threading.Thread):
                     self.exec_log_file.write(f"Crash Type: {result.crash_type.value if result.crash_type else 'Unknown'}\n")
 
                 self.exec_log_file.write("\n--- STDOUT ---\n")
-                stdout_text = result.stdout.decode('utf-8', errors='ignore')
+                stdout_text = result.stdout
+                if isinstance(stdout_text, bytes):
+                    stdout_text = stdout_text.decode('utf-8', errors='ignore')
                 self.exec_log_file.write(stdout_text)
 
                 self.exec_log_file.write("\n--- STDERR ---\n")
-                stderr_text = result.stderr.decode('utf-8', errors='ignore')
+                stderr_text = result.stderr
+                if isinstance(stderr_text, bytes):
+                    stderr_text = stderr_text.decode('utf-8', errors='ignore')
                 self.exec_log_file.write(stderr_text)
 
                 self.exec_log_file.write("\n" + "="*50 + "\n\n")
