@@ -1,0 +1,406 @@
+commit 6817ebee7fd3999ad68073b222cbfcd2120c32c4
+Author: Sara Papandrea <papandrea.sara@outlook.com>
+Date:   Fri Oct 31 11:10:48 2025 +1100
+
+    updated writeup for crash
+
+commit 07364296fbe1a04850c86d9850388a856dc7cd0c
+Merge: 933ad8b a5e2a7b
+Author: Rachel <z5491551@ad.unsw.edu.au>
+Date:   Fri Oct 31 11:05:18 2025 +1100
+
+    WIP on main: 933ad8b changed back to bad_binaryname for crash input file
+
+commit a5e2a7bc936b9cecc28ee3e1a214c5fb50cbf25f
+Author: Rachel <z5491551@ad.unsw.edu.au>
+Date:   Fri Oct 31 11:05:18 2025 +1100
+
+    index on main: 933ad8b changed back to bad_binaryname for crash input file
+
+commit ea31c4e73d6c3bcbcd8739e0f6b0566cb8c658b7
+Author: Sara Papandrea <papandrea.sara@outlook.com>
+Date:   Fri Oct 31 11:04:23 2025 +1100
+
+    fixed file saving
+
+commit 933ad8b50a2e4fd0d8a39e3afb7e19b086ead643
+Author: Rachel <z5491551@ad.unsw.edu.au>
+Date:   Fri Oct 31 10:48:12 2025 +1100
+
+    changed back to bad_binaryname for crash input file
+
+commit d45ba183c3926b71c6e5e2c6b4b53f002ffcb863
+Author: Rachel <z5491551@ad.unsw.edu.au>
+Date:   Fri Oct 31 10:29:06 2025 +1100
+
+    added run_fuzzer script
+
+commit 267864fe947ced98bee9a12330d4586dcb849536
+Author: Rachel <z5491551@ad.unsw.edu.au>
+Date:   Fri Oct 31 10:17:13 2025 +1100
+
+    mutation strats writeup
+
+commit a045a10cb7852a1a44b601e8b9b1dfa8b9d90a6f
+Author: Sara Papa <sarapapa@Saras-MacBook-Pro-2.local>
+Date:   Thu Oct 30 23:25:25 2025 +1100
+
+    writeup for fuzzer design/architecture
+
+commit ebe1412dfada4017e91e83b097a2789a25a72a52
+Author: root <root@Mainframe.localdomain>
+Date:   Thu Oct 30 20:16:17 2025 +1100
+
+    added docker stuff
+
+commit 39eb9fffb59f57c69468cc73ac94134118776880
+Author: Rachel <z5491551@ad.unsw.edu.au>
+Date:   Thu Oct 30 19:33:11 2025 +1100
+
+    fixed mutation strats so both json1 and csv1 crash
+
+commit 27b57e45cf8eee3d5305791a80dd0b7af4d32de9
+Author: Rachel <z5491551@ad.unsw.edu.au>
+Date:   Thu Oct 30 18:31:25 2025 +1100
+
+    fixed crash logic and json mutator
+
+commit 211b286f8e952c08290d74557c3a3d315a55dcd4
+Merge: 9df84ff 7d2d9e6
+Author: Nitesama <eugenia.chan1107@gmail.com>
+Date:   Thu Oct 30 16:59:15 2025 +1100
+
+    Merge pull request #3 from hopelesscaffeineaddict/eugenia/testing
+    
+    Eugenia/testing
+
+commit 7d2d9e6051063a6ef301571c51706cf1c38cda84
+Author: root <eugenia.chan1107@gmail.com>
+Date:   Thu Oct 30 13:57:43 2025 +0800
+
+    fixed parsing issue in csv
+
+commit cae9d25bd859bcd186cc8c7f07a1f58fccbbc479
+Author: Rachel <z5491551@ad.unsw.edu.au>
+Date:   Thu Oct 30 16:07:51 2025 +1100
+
+    fixed JSON mutator
+
+commit 9df84ff0d7647f9164e3eb7f40be674e398b671c
+Author: Rachel <z5491551@ad.unsw.edu.au>
+Date:   Thu Oct 30 15:47:54 2025 +1100
+
+    minor fixes?
+
+commit c06fd22e653b4fc4716aac1a5f2f89b723622b9d
+Author: root <eugenia.chan1107@gmail.com>
+Date:   Thu Oct 30 10:49:56 2025 +0800
+
+    prepare for pull
+
+commit 7608af6ebdf499691112539b9b4dd235549d0a83
+Merge: 634f3c3 f49ad3d
+Author: Rachel <z5491551@ad.unsw.edu.au>
+Date:   Thu Oct 30 10:55:49 2025 +1100
+
+    Merge branch 'ray/format-specific-mutator'
+    merging updated mutator strategies in
+
+commit f49ad3d4822728899411530a438bbeeee736c740
+Author: Rachel <z5491551@ad.unsw.edu.au>
+Date:   Thu Oct 30 10:52:25 2025 +1100
+
+    the fuzzer executes now
+
+commit f541a88160eca92c1c0e8076b9eb1addc638de5f
+Author: Rachel <z5491551@ad.unsw.edu.au>
+Date:   Thu Oct 30 01:41:05 2025 +1100
+
+    implemented more field mutation strats for csv
+
+commit 634f3c33c82bdb9dd0a942481c965ca1f8dddcad
+Merge: 2b031dc be026ea
+Author: ray <129613666+hopelesscaffeineaddict@users.noreply.github.com>
+Date:   Thu Oct 30 01:21:56 2025 +1100
+
+    Merge pull request #2 from hopelesscaffeineaddict/ray/format-specific-mutator
+    
+    Ray/format specific mutator
+
+commit be026eabc105a72db05be79b32f530c044229b8b
+Merge: 5edf3aa 2b031dc
+Author: Rachel <z5491551@ad.unsw.edu.au>
+Date:   Thu Oct 30 01:15:33 2025 +1100
+
+    created abstract base class for mutator, implemented subclasses for diff format types (json/csv/generic), implemented csv mutation strategies, added binary executable check
+
+commit 2b031dc52c5a7503515909fc3952bddcac0cba0c
+Merge: 29bf468 f7bbf3a
+Author: Nitesama <eugenia.chan1107@gmail.com>
+Date:   Wed Oct 29 19:19:54 2025 +1100
+
+    Merge pull request #1 from hopelesscaffeineaddict/CSV_strategy
+    
+    Csv strategy
+
+commit f7bbf3af5e00475202e291efe7120b735c5ac7ba
+Author: root <eugenia.chan1107@gmail.com>
+Date:   Wed Oct 29 16:18:48 2025 +0800
+
+    added gitignore and midpoint binaries
+
+commit 051381a43692d0a689bed6f5856be58060645497
+Author: root <eugenia.chan1107@gmail.com>
+Date:   Wed Oct 29 16:17:36 2025 +0800
+
+    more mutators
+
+commit 5edf3aae15866ef9b61e30965cf40035419cffaf
+Author: Arhaan Gupta <arhaangupta26@gmail.com>
+Date:   Wed Oct 29 18:45:08 2025 +1100
+
+    added json into json mutation
+
+commit cd2d9908ebb34ffc9a866614142bf644162f3dcd
+Author: root <eugenia.chan1107@gmail.com>
+Date:   Wed Oct 29 15:18:47 2025 +0800
+
+    added more mutations
+
+commit 6ba63b740e55c6848d599466f537c391657fa5d3
+Author: Arhaan Gupta <arhaangupta26@gmail.com>
+Date:   Wed Oct 29 18:08:55 2025 +1100
+
+    mutations add for json
+
+commit 7d45739740251913c595e043baaf2225210e55c8
+Merge: 17400d1 4485412
+Author: Rachel <z5491551@ad.unsw.edu.au>
+Date:   Tue Oct 28 20:03:04 2025 +1100
+
+    fixed merge conflict
+
+commit 17400d1987360dc82121bc2647e750804db176f0
+Author: Rachel <z5491551@ad.unsw.edu.au>
+Date:   Tue Oct 28 20:01:32 2025 +1100
+
+    post run statistics and mutated input in files
+
+commit 4485412f128b874f295dcfcb65b65096cf98e237
+Author: Sara Papandrea <papandrea.sara@outlook.com>
+Date:   Tue Oct 28 19:11:49 2025 +1100
+
+    changed process cleanup slightly
+
+commit d783c9ff0b0dd0c6a052148a699b54d0752509ae
+Author: Sara Papandrea <papandrea.sara@outlook.com>
+Date:   Tue Oct 28 18:34:15 2025 +1100
+
+    fuzzer running
+
+commit ee548a30b7b8e723849c2f97fb1f8662981dde1e
+Author: Sara Papandrea <papandrea.sara@outlook.com>
+Date:   Tue Oct 28 17:53:57 2025 +1100
+
+    changed program architecture
+
+commit a023050364f2bf42f60212e74466c7648f682885
+Author: Rachel <z5491551@ad.unsw.edu.au>
+Date:   Tue Oct 28 12:26:03 2025 +1100
+
+    added loop for mutator thread, completed start/stop, finished init
+
+commit 826b7507f585068802b8195d7cf40553b5848856
+Merge: c0f2f1d a5204e1
+Author: Rachel <z5491551@ad.unsw.edu.au>
+Date:   Tue Oct 28 11:19:29 2025 +1100
+
+    Merge branch 'CSV_strategy' into ray/crash_handler
+    merging mutator strats in to test harness functionality
+
+commit c0f2f1d6392dfece1fa305cf3ced51d463b1d2fd
+Author: Rachel <z5491551@ad.unsw.edu.au>
+Date:   Tue Oct 28 11:19:06 2025 +1100
+
+    sample input for testing
+
+commit 2c1bb6e271870a4bb2ad3130e4ba8ed12ef1ae01
+Author: Rachel <z5491551@ad.unsw.edu.au>
+Date:   Tue Oct 28 11:14:33 2025 +1100
+
+    more minor fixes
+
+commit 949855c6cdcd586d10e80d8532711acc37a49713
+Author: Rachel <z5491551@ad.unsw.edu.au>
+Date:   Tue Oct 28 10:37:47 2025 +1100
+
+    fixed bug in crashes.py that incorrectly reported total_executions as 1
+
+commit 63424851fcc078c6a2271ebc009ff95bdae9f723
+Author: Rachel <z5491551@ad.unsw.edu.au>
+Date:   Tue Oct 28 10:22:21 2025 +1100
+
+    modified runner_loop to break after first crash found
+
+commit e863bdbd9eb2096f700532862d6adc49ff5576e8
+Author: Rachel <z5491551@ad.unsw.edu.au>
+Date:   Tue Oct 28 02:01:48 2025 +1100
+
+    added fn (execute_with_harness) that executes given binary w single input and returns the execution result in ExecutionResult
+
+commit cdd1a4793267ab180ff295f02e70b04d073661e6
+Author: Rachel <z5491551@ad.unsw.edu.au>
+Date:   Tue Oct 28 01:37:56 2025 +1100
+
+    added signal_to_crash_type, extract_signal_from_stderr and analyse_crash for extracting signal numbers from stderr and mapping it to the crash type
+
+commit cf264f61aeb3a7af191c0737ca917621260a67c2
+Author: Rachel <z5491551@ad.unsw.edu.au>
+Date:   Tue Oct 28 01:00:23 2025 +1100
+
+    minor fixes
+
+commit f5c4d6ab79b59bad24c04b1e03a812a06315150a
+Author: Rachel <z5491551@ad.unsw.edu.au>
+Date:   Tue Oct 28 00:54:34 2025 +1100
+
+    added imports from models
+
+commit a5204e154a270889e80e8ce77b70f6ba9733b53c
+Author: unknown <eugenia.chan1107@gmail.com>
+Date:   Sat Oct 25 18:05:39 2025 +1100
+
+    generic mutator strategies
+
+commit 04d7aae067f6a3905beef447ce3abbc70730e8bd
+Author: Rachel <z5491551@ad.unsw.edu.au>
+Date:   Sat Oct 25 15:09:31 2025 +1100
+
+    checks for all format types
+
+commit 16954d4dcfc891a5c74ce7d03a041cbddcb17d5a
+Author: Rachel <z5491551@ad.unsw.edu.au>
+Date:   Sat Oct 25 15:01:19 2025 +1100
+
+    added class for format types and magic bytes and modified is_csv to check if input resembles csv rather than checking if header is present
+
+commit 3cf2f53e76edd6123aa90ab1bab41857a5c5a2a4
+Author: Rachel <z5491551@ad.unsw.edu.au>
+Date:   Sat Oct 25 14:16:45 2025 +1100
+
+    data structs for crash types and exec results used in crashes.py
+
+commit 5f8ea288a1bfcc0e6a63b7e14e8c4170e77fd2f0
+Author: Rachel <z5491551@ad.unsw.edu.au>
+Date:   Sat Oct 25 13:34:40 2025 +1100
+
+    added functions for generating and saving crash stats in output_fuzzer
+
+commit 29bf4685724b2da98aafc8ced46fcff5d88b5048
+Author: Sara Papandrea <papandrea.sara@outlook.com>
+Date:   Fri Oct 24 19:48:47 2025 +1100
+
+    removed old main
+
+commit d52748449d552dafdbb2cccac516c762f0182c95
+Merge: 4439f24 bbf2bd9
+Author: Sara Papandrea <papandrea.sara@outlook.com>
+Date:   Fri Oct 24 19:47:26 2025 +1100
+
+    merged main/controller
+
+commit bbf2bd970cee89848ae61747d6ea70a926848f73
+Author: Rachel <z5491551@ad.unsw.edu.au>
+Date:   Fri Oct 24 19:01:21 2025 +1100
+
+    architecture diagram and todo for midpoint
+
+commit 4439f243bd0a556839878bb8290281d7b78b5214
+Author: Sara Papandrea <papandrea.sara@outlook.com>
+Date:   Fri Oct 24 18:54:06 2025 +1100
+
+    removed bad comment
+
+commit abb2020a0bf568151e3669de44933401f954717c
+Author: Rachel <z5491551@ad.unsw.edu.au>
+Date:   Fri Oct 24 18:41:16 2025 +1100
+
+    harness?
+
+commit 15980c0a5a12ef3e084a89e49b432098ea0ff574
+Author: Rachel <z5491551@ad.unsw.edu.au>
+Date:   Fri Oct 24 18:20:58 2025 +1100
+
+    completed matching function
+
+commit 8c48a34b40183abeeb679a06b13a37eef5a00cc0
+Author: Rachel <z5491551@ad.unsw.edu.au>
+Date:   Fri Oct 24 18:09:52 2025 +1100
+
+    finished validation
+
+commit ec6f900c77021cec0e9737381c05dc9028b1388c
+Author: Sara Papa <sarapapa@Saras-MacBook-Pro-2.local>
+Date:   Fri Oct 24 17:53:23 2025 +1100
+
+    stub implementation for necessary classes and functions
+
+commit 6a57a62366762f45da86a684e38c51cd10da4ec6
+Author: Sara Papa <sarapapa@Saras-MacBook-Pro-2.local>
+Date:   Fri Oct 24 17:44:13 2025 +1100
+
+    modified format function to get input internally
+
+commit 301f33a7c7c9aade547242d7a8f590685b8ad164
+Author: Sara Papa <sarapapa@Saras-MacBook-Pro-2.local>
+Date:   Fri Oct 24 17:34:53 2025 +1100
+
+    added a crashes handler class
+
+commit b98cab330568ba4ff3ecc5fa3c0789c03bc75618
+Author: Sara Papa <sarapapa@Saras-MacBook-Pro-2.local>
+Date:   Fri Oct 24 17:32:59 2025 +1100
+
+    added stub mutator class
+
+commit 384dee9f8a94e559675a21b51eccf0682e8035e9
+Author: Sara Papandrea <papandrea.sara@outlook.com>
+Date:   Fri Oct 24 16:13:10 2025 +1100
+
+    created a crash worker thread
+
+commit 95c4bc25071aa46a333d5e6030e08ed13c545e0a
+Author: Rachel <z5491551@ad.unsw.edu.au>
+Date:   Fri Oct 24 13:18:18 2025 +1100
+
+    Completed parse_arguments function
+
+commit 174a1cac68faf062ca57073f094a121c672f5fc0
+Author: Rachel <z5491551@ad.unsw.edu.au>
+Date:   Fri Oct 24 02:10:18 2025 +1100
+
+    Added overall logic for fuzzer - parse, validate args + find files
+
+commit df89f8c4496b0cfa5f0d92ed803a937cc52df648
+Author: Rachel <z5491551@ad.unsw.edu.au>
+Date:   Fri Oct 24 02:09:10 2025 +1100
+
+    Sample dockerfile from provided example fuzzer
+
+commit f86a31766d753d6603f6e8b3a96dde6cf9a99b4a
+Author: Sara Papa <sarapapa@Saras-MacBook-Pro-2.local>
+Date:   Thu Oct 23 16:39:35 2025 +1100
+
+    basic code for running binary and detecting bin format
+
+commit 786606ba2c8873cd15341278ebad54bb4c5b3092
+Author: Rachel <rachelgoh03@gmail.com>
+Date:   Tue Oct 21 18:32:47 2025 +1100
+
+    added binaries and example inputs
+
+commit 6a6471b5ad4dc5cf38174711dc4816251bff0876
+Author: ray <129613666+hopelesscaffeineaddict@users.noreply.github.com>
+Date:   Wed Oct 15 13:55:38 2025 +1100
+
+    Initial commit
