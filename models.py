@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Optional
+from typing import Optional, Set
 
 class CrashType(Enum):
     STACKSMASH = "stack smashing"
@@ -25,7 +25,7 @@ class ExecutionResult:
         crashed: bool = False,
         crash_type: Optional[CrashType] = None,
         signal: Optional[int] = None,
-        fault_address: Optional[str] = None
+        coverage: Optional[Set[int]] = None
     ):
         self.return_code = return_code
         self.stdout = stdout
@@ -34,4 +34,4 @@ class ExecutionResult:
         self.crashed = crashed
         self.crash_type = crash_type
         self.signal = signal
-        self.fault_address = fault_address
+        self.coverage = coverage

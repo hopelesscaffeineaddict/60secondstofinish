@@ -7,6 +7,8 @@
 #include <sys/wait.h>
 #include <signal.h>
 #include <sys/user.h>
+#include <fcntl.h>
+#include <stdbool.h>
 
 #define BUFFER_LEN 4096
 #define MAX_COVERAGE_SIZE 65536
@@ -27,7 +29,7 @@ void timeout_handler(int signal) {
         kill(child_pid, SIGKILL);
     }
 
-    fprintf(stdout, "crash_type:timeout|signal:%d\n", signal);
+    fprintf(stdout, "CRASH_TYPE:timeout|SIGNAL:%d", signal);
 }
 
 int main(int argc, char *argv[]) {
@@ -105,11 +107,30 @@ int main(int argc, char *argv[]) {
         }
 
         // closing read end of pipe will signal EOF for the child process
-        close(proc_pipe[1]);
+        close(stdin_pipe[1]);
         waitpid(child_pid, &status, 0);
 
+        // set pipes to nonblocking (so reads dont block ptrace loop)
+        fcntl(stdout_pipe[0], F_SETFL, O_NONBLOCK);
+        fcntl(stderr_pipe[0], F_SETFL, O_NONBLOCK);
+
+        char outbuf[BUFFER_LEN];
+        char errbuf[BUFFER_LEN];
         // tracer loop
         while (WIFSTOPPED(status)) {
+            // capture binary/child stdout
+            ssize_t n;
+            while ((n = read(stdout_pipe[0], outbuf, BUFFER_LEN)) > 0) {
+                write(STDOUT_FILENO, "STDOUT:", 7);
+                write(STDOUT_FILENO, outbuf, n);
+            }
+
+            // capture binary/child stderr
+            while ((n = read(stderr_pipe[0], errbuf, BUFFER_LEN)) > 0) {
+                write(STDERR_FILENO, "STDERR:", 7);
+                write(STDERR_FILENO, errbuf, n);
+            }
+
             if (ptrace(PTRACE_GETREGS, child_pid, NULL, &regs) == -1) {
                 // error tracing instruction
                 break;
@@ -131,14 +152,33 @@ int main(int argc, char *argv[]) {
             }
         }
 
+        write(STDOUT_FILENO, "|", 1);
+        write(STDERR_FILENO, "|", 1);
+
         // disable queued timeout
         alarm(0);
 
         // record results for crash handler to analyse
         if (WIFSIGNALED(status) || (WIFSTOPPED(status) && WSTOPSIG(status) != SIGTRAP)) {
             int signal = WIFSIGNALED(status) ? WTERMSIG(status) : WSTOPSIG(status);
-            fprintf(stdout, "crash_type:crash|signal:%d\n", signal);
+            fprintf(stdout, "CRASH_TYPE:crash|SIGNAL:%d", signal);
+        } else {
+            fprintf(stdout, "CRASH_TYPE:none|signal:0");
         }
+
+        // record the coverage results
+        fprintf(stdout, "|coverage:");
+        bool first_cov = true;
+        for (int i = 0; i < MAX_COVERAGE_SIZE; i++) {
+            if (coverage_bitmap[i]) {
+                if (!first_cov) {
+                    fprintf(stdout, ",");
+                    first_cov = false;
+                }
+                fprintf(stdout, "%x", i);
+            }
+        }
+
     }
 
     return 0;

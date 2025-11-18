@@ -71,7 +71,6 @@ class Runner(threading.Thread):
 
             execution_time = time.time() - start_time
             return_code = proc.returncode
-
             # TODO: parse the harness results
             self.parse_harness_results(return_code, stdout, stderr, execution_time)
 
@@ -90,34 +89,49 @@ class Runner(threading.Thread):
         stdout_str = stdout.decode("utf-8", errors="ignore").strip()
         stderr_str = stderr.decode("utf-8", errors="ignore").strip()
 
-        crashed = False
-        crash_type = None
-        signal = None
+        harness_result = {}
 
         if stdout_str:
-            harness_result = {}
             try:
-                # if a crash occurred, a key value pair would've been printed to stdout
-                # e.g. "crash_type:crash|signal:1"
-                results = stdout_str.split('|')
+                # parse all the binary run details from the harness
+                results = stdout_str.split('|') + stderr_str.split('|')
                 for result in results:
                     key, value = result.split(':', 1)
-                    harness_result[key.strip()] = value.strip()
+                    if key.strip() in harness_result:
+                        harness_result[key.strip()] += value.strip()
+                    else:
+                        harness_result[key.strip()] = value.strip()
+
             except ValueError:
                 # TODO: dont know how I want to handle this error atm
                 pass
 
-            harness_crash_type = harness_result.get('crash_type')
-            if harness_crash_type == 'timeout':
+            crashed = False
+            crash_type = harness_result.get('CRASH_TYPE', '')
+            signal = int(harness_result.get('SIGNAL', 0))
+            binary_stdout = harness_result.get('STDOUT', '')
+            binary_stderr = harness_result.get('STDERR', '')
+            coverage_str = harness_result.get("COVERAGE", '')
+            coverage = {int(c, 16) for c in coverage_str.split(',') if c} if coverage_str else None
+
+            found_crash_type = None
+            if crash_type == 'none':
+                return ExecutionResult(
+                    signal, binary_stdout, binary_stderr,
+                    execution_time, False, None, None, None
+                )
+            elif crash_type == 'timeout':
                 crashed = True
-                crash_type = CrashType.TIMEOUT
-                signal = int(harness_result.get('signal', 0))
-            elif harness_crash_type == 'crash':
-                # TODO: need to adjust harness to still capture binary stdout/stderr
+                found_crash_type = CrashType.TIMEOUT
+            elif crash_type == 'crash':
                 crashed = True
-                crash_type = self.signal_to_crash_type()
-                signal = int(harness_result.get('signal', 0))
-        pass
+                found_crash_type = self.analyse_crash(signal, binary_stderr)
+
+            return ExecutionResult(
+                    signal, binary_stdout, binary_stderr,
+                    execution_time, crashed, found_crash_type,
+                    self.extract_signal_from_stderr(binary_stderr), coverage
+                )
 
     # def execute_input(self, input_data: bytes) -> ExecutionResult:
     #     start_time = time.time()
@@ -175,14 +189,7 @@ class Runner(threading.Thread):
     #         )
 
     # analyse execution results to determine if a crash occurred
-    def analyse_crash(self, return_code: int, stderr: bytes, execution_time: float):
-        # signal based crash detection
-        if return_code < 0:
-            signal_num = abs(return_code)
-            crash_type = self.signal_to_crash_type(signal_num)
-            if crash_type:
-                return crash_type
-
+    def analyse_crash(self, return_code: int, stderr: bytes):
         # better crash analysis w pattern matching from models.py
         # i really don't know if this works i'm just throwing shit at the wall
         stderr_str = stderr.decode("utf-8", errors="ignore").lower()
@@ -203,6 +210,13 @@ class Runner(threading.Thread):
 
         for pattern, crash_type in crash_patterns.items():
             if pattern in stderr_str:
+                return crash_type
+
+        # signal based crash detection
+        if return_code < 0:
+            signal_num = abs(return_code)
+            crash_type = self.signal_to_crash_type(signal_num)
+            if crash_type:
                 return crash_type
 
         return None
