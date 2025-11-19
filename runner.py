@@ -28,7 +28,6 @@ class Runner(threading.Thread):
             except queue.Empty:
                 continue
 
-            input_data = b'{"len": -1, "input": "AAAABBBBCCCC","more_data": ["a", "bb"]}'
             if self.coverage:
                 result = self.execute_input_with_coverage(input_data)
             else:
@@ -124,7 +123,6 @@ class Runner(threading.Thread):
             crashed = False
             crash_type = harness_result.get('CRASH_TYPE', '')
             signal = int(harness_result.get('SIGNAL', 0))
-
 
             coverage_str = harness_result.get("COVERAGE", '')
             coverage = {hex((int(c, 16) << 4)) for c in coverage_str.split(',') if c} if coverage_str else None
