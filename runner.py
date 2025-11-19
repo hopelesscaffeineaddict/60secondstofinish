@@ -25,9 +25,10 @@ class Runner(threading.Thread):
                 input_data = self.input_queue.get(timeout=0.5)
             except queue.Empty:
                 continue
+            input_data = b'{"len": -1, "input": "AAAABBBBCCCC","more_data": ["a", "bb"]}'
 
             self.stats["total_executions"] += 1
-            result = self.execute_input(input_data)
+            result = self.execute_input_with_coverage(input_data)
 
             # log execution results
             self.mutator.log_execution(input_data, result)
@@ -38,7 +39,7 @@ class Runner(threading.Thread):
                     self.crash_handler.crashes.append({"result": result, "input": input_data})
                     self.crash_handler.condition.notify()
 
-    def execute_input(self, input_data: bytes) -> ExecutionResult:
+    def execute_input_with_coverage(self, input_data: bytes) -> ExecutionResult:
         start_time = time.time()
         harness = './harness'
 
@@ -53,9 +54,7 @@ class Runner(threading.Thread):
 
             # give the harness extra time to run (as ptrace is quite slow)
             try:
-                input_data = b'{"len": -1, "input": "AAAABBBBCCCC","more_data": ["a", "bb"]}'
-                stdout, stderr = proc.communicate(input=input_data, timeout=self.timeout + 1)
-
+                stdout, stderr = proc.communicate(input=input_data, timeout=15)
             except subprocess.TimeoutExpired:
                 # c harness timeout (something went wrong in harness not binary)
                 proc.kill()
@@ -71,9 +70,7 @@ class Runner(threading.Thread):
 
             execution_time = time.time() - start_time
             return_code = proc.returncode
-            # TODO: parse the harness results
             return self.parse_harness_results(return_code, stdout, execution_time)
-
         except Exception as e:
             return ExecutionResult(
                 return_code = -2,
@@ -115,9 +112,7 @@ class Runner(threading.Thread):
             coverage_str = harness_result.get("COVERAGE", '')
             coverage = {int(c, 16) for c in coverage_str.split(',') if c} if coverage_str else None
 
-            print(signal)
-            print(binary_stdout)
-            print(binary_stderr)
+            print(harness_result, crash_type)
 
             found_crash_type = None
             if crash_type == 'none':
@@ -195,6 +190,8 @@ class Runner(threading.Thread):
 
     # analyse execution results to determine if a crash occurred
     def analyse_crash(self, return_code: int, stderr: bytes):
+        if not stderr:
+            return None
         # better crash analysis w pattern matching from models.py
         # i really don't know if this works i'm just throwing shit at the wall
         stderr_str = stderr.decode("utf-8", errors="ignore").lower()
@@ -238,6 +235,9 @@ class Runner(threading.Thread):
 
     # extract signal number from stderr output
     def extract_signal_from_stderr(self, stderr: bytes):
+        if not stderr:
+            return None
+
         stderr_str = stderr.decode("utf-8", errors="ignore")
         signal_match = re.search(r"signal \w+ \((\d+)\)", stderr_str)
         if signal_match:

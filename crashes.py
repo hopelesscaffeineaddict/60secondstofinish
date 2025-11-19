@@ -48,7 +48,6 @@ class CrashHandler(threading.Thread):
             # track crash types
             if result.crashed:
                 self.stats['crashes_found'] += 1
-
                 crash_type_str = "unknown"
 
                 if result.crash_type:
@@ -82,10 +81,14 @@ class CrashHandler(threading.Thread):
             f.write(f"Execution Time: {result.execution_time:.4f} seconds\n\n")
 
             f.write("stderr output:\n")
-            f.write(result.stderr.decode('utf-8', errors='ignore'))
+            if isinstance(result.stderr, bytes):
+                    result.stderr = result.stderr.decode('utf-8', errors='ignore')
+            f.write(result.stderr)
 
             f.write("stdout output:\n")
-            f.write(result.stdout.decode('utf-8', errors='ignore'))
+            if isinstance(result.stdout, bytes):
+                    result.stdout = result.stdout.decode('utf-8', errors='ignore')
+            f.write(result.stdout)
 
             f.write("input data:\n")
             f.write(repr(crash_input[:1024]))
@@ -96,7 +99,7 @@ class CrashHandler(threading.Thread):
         print(f"[CRASH INPUT SAVED] Saved crashing input to {out_file}")
         print(f"[REPORT SAVED] Detailed report saved to {report_file}")
 
-        stderr_preview = result.stderr.decode('utf-8', errors='ignore')[:200]
+        stderr_preview = result.stderr[:200]
         if stderr_preview:
             print(f"[+] stderr preview: {stderr_preview}...")
 
