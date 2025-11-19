@@ -17,6 +17,20 @@ if [ ! -d "fuzzer_output" ]; then
     mkdir fuzzer_output
 fi
 
+# Ensure the harness exists
+if [ ! -f "harness.c" ]; then
+    echo "Error: No file names harness.c exists in CWD."
+    exit 1
+fi
+
+# Compile the c harness
+echo "Compiling harness.c."
+gcc harness.c -o harness
+if [ $? -ne 0 ]; then
+    echo "Error: Failed to compile harness.c"
+    exit 1
+fi
+
 echo "Deleting old fuzzer output files."
 rm 'fuzzer_output/*' 2>/dev/null
 

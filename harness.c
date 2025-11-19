@@ -33,6 +33,7 @@ char out_buf[MAX_OUTPUT_LEN] = {0};
 char err_buf[MAX_OUTPUT_LEN] = {0};
 int out_len = 0;
 int err_len = 0;
+bool timeout_triggered = false;
 
 void load_fn_symbols(char *binary_path) {
     char cmd[1024];
@@ -125,6 +126,7 @@ void add_coverage(uintptr_t addr) {
 }
 
 void timeout_handler(int signal) {
+    timeout_triggered = true;
     if (child_pid != -1) {
         // kill child process if still live
         kill(child_pid, SIGKILL);
@@ -314,7 +316,7 @@ int main(int argc, char *argv[]) {
         // write results for crash handler to analyse to harness stderr
         if (WIFSIGNALED(status)) {
             int sig = WTERMSIG(status);
-            if (sig == SIGKILL) {
+            if (sig == SIGKILL && timeout_triggered) {
                 fprintf(stderr, "CRASH_TYPE:timeout|SIGNAL:%d", sig);
             } else {
                 fprintf(stderr, "CRASH_TYPE:crash|SIGNAL:%d", sig);

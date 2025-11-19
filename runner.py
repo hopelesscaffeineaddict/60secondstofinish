@@ -58,7 +58,7 @@ class Runner(threading.Thread):
 
             # give the harness extra time to run (as ptrace is quite slow)
             try:
-                stdout, stderr = proc.communicate(input=input_data, timeout=15)
+                stdout, stderr = proc.communicate(input=input_data, timeout=self.timeout + 1)
             except subprocess.TimeoutExpired:
                 # c harness timeout (something went wrong in harness not binary)
                 proc.kill()
