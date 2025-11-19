@@ -299,32 +299,44 @@ int main(int argc, char *argv[]) {
         // disable queued timeout
         alarm(0);
 
-        fprintf(stdout, "STDOUT:%s|STDERR:%s|", out_buf, err_buf);
+        // write child proc's stdout to harness stdout
+        if (out_len > 0) {
+            fprintf(stdout, "STDOUT:");
+            fwrite(out_buf, 1, out_len, stdout);
+        }
+
+        // write child proc's stderr to harness stdout
+        if (err_len > 0) {
+            fprintf(stdout, "|STDERR:");
+            fwrite(err_buf, 1, err_len, stdout);
+        }
+        fflush(stdout);
 
         // record results for crash handler to analyse
         if (WIFSIGNALED(status)) {
             int sig = WTERMSIG(status);
             if (sig == SIGKILL) {
-                fprintf(stdout, "CRASH_TYPE:timeout|SIGNAL:%d", sig);
+                fprintf(stderr, "CRASH_TYPE:timeout|SIGNAL:%d", sig);
             } else {
-                fprintf(stdout, "CRASH_TYPE:crash|SIGNAL:%d", sig);
+                fprintf(stderr, "CRASH_TYPE:crash|SIGNAL:%d", sig);
             }
         } else {
-            fprintf(stdout, "CRASH_TYPE:none|SIGNAL:0");
+            fprintf(stderr, "CRASH_TYPE:none|SIGNAL:0");
         }
 
         // record the coverage results
-        fprintf(stdout, "|COVERAGE:");
+        fprintf(stderr, "|COVERAGE:");
         bool first_cov = true;
         for (int i = 0; i < MAX_COVERAGE_SIZE; i++) {
             if (coverage_bitmap[i]) {
                 if (!first_cov) {
-                    fprintf(stdout, ",");
+                    fprintf(stderr, ",");
                 }
-                fprintf(stdout, "%x", i);
+                fprintf(stderr, "%x", i);
                 first_cov = false;
             }
         }
+        fprintf(stderr, "\n");
 
     }
 

@@ -8,7 +8,7 @@ import signal
 from models import ExecutionResult, CrashType
 
 class Runner(threading.Thread):
-    def __init__(self, binary_path, input_queue, crash_handler, stop_event, mutator, timeout=2.0):
+    def __init__(self, binary_path, input_queue, crash_handler, stop_event, mutator, coverage, timeout=2.0):
         super().__init__(daemon=True)
         self.binary_path = binary_path
         self.input_queue = input_queue
@@ -17,6 +17,8 @@ class Runner(threading.Thread):
         self.timeout = timeout
         self.stats = {"total_executions": 0}
         self.mutator = mutator
+        self.coverage = coverage
+        self.total_coverage = set()
 
     def run(self):
         while not self.stop_event.is_set():
@@ -25,10 +27,13 @@ class Runner(threading.Thread):
                 input_data = self.input_queue.get(timeout=0.5)
             except queue.Empty:
                 continue
-            input_data = b'{"len": -1, "input": "AAAABBBBCCCC","more_data": ["a", "bb"]}'
 
+            input_data = b'{"len": -1, "input": "AAAABBBBCCCC","more_data": ["a", "bb"]}'
+            if self.coverage:
+                result = self.execute_input_with_coverage(input_data)
+            else:
+                result = self.execute_input(input_data)
             self.stats["total_executions"] += 1
-            result = self.execute_input_with_coverage(input_data)
 
             # log execution results
             self.mutator.log_execution(input_data, result)
@@ -70,7 +75,7 @@ class Runner(threading.Thread):
 
             execution_time = time.time() - start_time
             return_code = proc.returncode
-            return self.parse_harness_results(return_code, stdout, execution_time)
+            return self.parse_harness_results(return_code, stdout, stderr, execution_time)
         except Exception as e:
             return ExecutionResult(
                 return_code = -2,
@@ -82,18 +87,30 @@ class Runner(threading.Thread):
                 signal = None,
             )
 
-    def parse_harness_results(self, return_code: int, stdout: bytes, execution_time: float):
-        stdout_str = stdout.decode("utf-8", errors="ignore").strip()
+    def parse_harness_results(self, return_code: int, stdout: bytes, stderr: bytes, execution_time: float):
+        # check if there was an error with the actual harness
+        if return_code != 0:
+            return ExecutionResult(
+                return_code, '', '', execution_time, False, None, None, None
+            )
 
+        # TODO: for cleaner code, maybe wrap these in try/except block
+        binary_output = stdout.decode("utf-8", errors="ignore")
+        if '|STDERR:' in binary_output:
+            parts = binary_output.split('|STDERR:')
+            stdout_str = parts[0]
+            stderr_str = parts[1]
+        else:
+            stdout_str = binary_output
+            stderr_str = ''
+
+        results_data = stderr.decode("utf-8", errors="ignore").strip() if stderr else ''
         harness_result = {}
-        results = []
 
-        if stdout_str:
+        if results_data:
             try:
                 # parse all the binary run details from the harness
-                # print(results)
-                results = stdout_str.split('|')
-                for result in results:
+                for result in results_data.split('|'):
                     key, value = result.split(':', 1)
                     if key.strip() in harness_result:
                         harness_result[key.strip()] += value.strip()
@@ -107,91 +124,93 @@ class Runner(threading.Thread):
             crashed = False
             crash_type = harness_result.get('CRASH_TYPE', '')
             signal = int(harness_result.get('SIGNAL', 0))
-            binary_stdout = harness_result.get('STDOUT', '')
-            binary_stderr = harness_result.get('STDERR', '')
-            coverage_str = harness_result.get("COVERAGE", '')
-            coverage = {int(c, 16) for c in coverage_str.split(',') if c} if coverage_str else None
 
-            print(harness_result, crash_type)
+
+            coverage_str = harness_result.get("COVERAGE", '')
+            coverage = {hex((int(c, 16) << 4)) for c in coverage_str.split(',') if c} if coverage_str else None
+            if coverage:
+                new_symbols = coverage - self.total_coverage
+                if new_symbols:
+                    print(f'[{os.path.basename(self.binary_path)}] New coverage found! {len(new_symbols)} new symbols explored.')
+                    print(f'[+] new offsets = {new_symbols}')
+                    self.total_coverage.update(new_symbols)
 
             found_crash_type = None
             if crash_type == 'none':
                 return ExecutionResult(
-                    signal, binary_stdout, binary_stderr,
-                    execution_time, False, None, None, None
+                    signal, stdout_str, stderr_str,
+                    execution_time, False, None, None, coverage
                 )
             elif crash_type == 'timeout':
                 crashed = True
                 found_crash_type = CrashType.TIMEOUT
             elif crash_type == 'crash':
                 crashed = True
-                found_crash_type = self.analyse_crash(signal, binary_stderr)
+                found_crash_type = self.analyse_crash(signal, stderr)
 
             return ExecutionResult(
-                    signal, binary_stdout, binary_stderr,
+                    signal, stdout_str, stderr_str,
                     execution_time, crashed, found_crash_type,
-                    self.extract_signal_from_stderr(binary_stderr), coverage
+                    self.extract_signal_from_stderr(stderr), coverage
                 )
 
-    # def execute_input(self, input_data: bytes) -> ExecutionResult:
-    #     start_time = time.time()
-    #     try:
-    #         # create subprocess for binary to run
-    #         # tbh don't know if this is the correct args or not
-    #         proc = subprocess.Popen(
-    #             [self.binary_path],
-    #             stdin=subprocess.PIPE,
-    #             stdout=subprocess.PIPE,
-    #             stderr=subprocess.PIPE,
-    #             preexec_fn=os.setsid  # so we can kill process group on timeout
-    #         )
+    def execute_input(self, input_data: bytes) -> ExecutionResult:
+        start_time = time.time()
+        try:
+            # create subprocess for binary to run
+            # tbh don't know if this is the correct args or not
+            proc = subprocess.Popen(
+                [self.binary_path],
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                preexec_fn=os.setsid  # so we can kill process group on timeout
+            )
 
-    #         try:
-    #             stdout, stderr = proc.communicate(input=input_data, timeout=self.timeout)
-    #             execution_time = time.time() - start_time
-    #             return_code = proc.returncode
-    #             crash_info = self.analyse_crash(return_code, stderr, execution_time)
-    #             return ExecutionResult(
-    #                 return_code = return_code,
-    #                 stdout = stdout,
-    #                 stderr = stderr,
-    #                 execution_time = execution_time,
-    #                 crashed = crash_info is not None,
-    #                 crash_type = crash_info if crash_info else None,
-    #                 signal = self.extract_signal_from_stderr(stderr),
-    #             )
-    #         # error handling for timeout
-    #         except subprocess.TimeoutExpired:
-    #             # kill process group
-    #             try:
-    #                 os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
-    #             except Exception:
-    #                 pass
-    #             proc.wait()
-    #             return ExecutionResult(
-    #                 return_code = -1,
-    #                 stdout = b"",
-    #                 stderr = b"Timeout",
-    #                 execution_time = time.time() - start_time,
-    #                 crashed = True,
-    #                 crash_type = CrashType.TIMEOUT,
-    #                 signal = None,
-    #             )
-    #     except Exception as e:
-    #         return ExecutionResult(
-    #             return_code = -2,
-    #             stdout = b"",
-    #             stderr = str(e).encode(),
-    #             execution_time = time.time() - start_time,
-    #             crashed = False,
-    #             crash_type = None,
-    #             signal = None,
-    #         )
+            try:
+                stdout, stderr = proc.communicate(input=input_data, timeout=self.timeout)
+                execution_time = time.time() - start_time
+                return_code = proc.returncode
+                crash_info = self.analyse_crash(return_code, stderr)
+                return ExecutionResult(
+                    return_code = return_code,
+                    stdout = stdout,
+                    stderr = stderr,
+                    execution_time = execution_time,
+                    crashed = crash_info is not None,
+                    crash_type = crash_info if crash_info else None,
+                    signal = self.extract_signal_from_stderr(stderr),
+                )
+            # error handling for timeout
+            except subprocess.TimeoutExpired:
+                # kill process group
+                try:
+                    os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+                except Exception:
+                    pass
+                proc.wait()
+                return ExecutionResult(
+                    return_code = -1,
+                    stdout = b"",
+                    stderr = b"Timeout",
+                    execution_time = time.time() - start_time,
+                    crashed = True,
+                    crash_type = CrashType.TIMEOUT,
+                    signal = None,
+                )
+        except Exception as e:
+            return ExecutionResult(
+                return_code = -2,
+                stdout = b"",
+                stderr = str(e).encode(),
+                execution_time = time.time() - start_time,
+                crashed = False,
+                crash_type = None,
+                signal = None,
+            )
 
     # analyse execution results to determine if a crash occurred
     def analyse_crash(self, return_code: int, stderr: bytes):
-        if not stderr:
-            return None
         # better crash analysis w pattern matching from models.py
         # i really don't know if this works i'm just throwing shit at the wall
         stderr_str = stderr.decode("utf-8", errors="ignore").lower()
@@ -209,17 +228,15 @@ class Runner(threading.Thread):
             "invalid read": CrashType.INVALID_READ,
             "invalid write": CrashType.INVALID_WRITE
         }
-
         for pattern, crash_type in crash_patterns.items():
             if pattern in stderr_str:
                 return crash_type
 
         # signal based crash detection
-        if return_code < 0:
-            signal_num = abs(return_code)
-            crash_type = self.signal_to_crash_type(signal_num)
-            if crash_type:
-                return crash_type
+        signal_num = abs(return_code)
+        crash_type = self.signal_to_crash_type(signal_num)
+        if crash_type:
+            return crash_type
 
         return None
 

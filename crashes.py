@@ -78,7 +78,8 @@ class CrashHandler(threading.Thread):
             f.write(f"Crash Type: {result.crash_type.value if result.crash_type else 'Unknown'}\n")
             f.write(f"Return Code: {result.return_code}\n")
             f.write(f"Signal: {result.signal}\n")
-            f.write(f"Execution Time: {result.execution_time:.4f} seconds\n\n")
+            f.write(f"Execution Time: {result.execution_time:.4f} seconds\n")
+            f.write(f"Coverage Offsets: {result.coverage}\n\n")
 
             f.write("stderr output:\n")
             if isinstance(result.stderr, bytes):

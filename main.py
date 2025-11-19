@@ -23,7 +23,7 @@ OUTPUT_DIR = "/fuzzer_output"
 
 processes = []
 
-def binary_process(binary_path, input_path, fuzz_time = 60):
+def binary_process(binary_path, input_path, coverage, fuzz_time = 60):
     # event to signal runner process to stop
     stop_event = threading.Event()
     # condition the crash handler waits on (when waiting for a crash to analayse)
@@ -39,9 +39,6 @@ def binary_process(binary_path, input_path, fuzz_time = 60):
     mutator = None
     max_queue_size = 200
 
-    # if isinstance(mutator, CSVMutator):
-    #     mutator.parse_csv_structure()
-
     if input_format == FormatType.JSON:
         print(f"[{binary_name}] Detected JSON format. Using JSONMutator.")
         mutator = JSONMutator(input_path, input_queue, stop_event, binary_name, max_queue_size)
@@ -56,7 +53,7 @@ def binary_process(binary_path, input_path, fuzz_time = 60):
         print(f"[{binary_name}] Using GenericMutator for format: {input_format.name}")
         mutator = GenericMutator(input_path, input_queue, stop_event, binary_name, max_queue_size)
 
-    runner = Runner(binary_path, input_queue, crash_handler, stop_event, mutator)
+    runner = Runner(binary_path, input_queue, crash_handler, stop_event, mutator, coverage)
 
     print(f"Starting fuzzing for {binary_path}")
     crash_handler.start()
@@ -65,7 +62,7 @@ def binary_process(binary_path, input_path, fuzz_time = 60):
 
     start_time = time.time()
     try:
-        # check for timeout or crash detection 
+        # check for timeout or crash detection
         while time.time() - start_time < fuzz_time and not stop_event.is_set():
             time.sleep(1)
     except KeyboardInterrupt:
@@ -113,6 +110,10 @@ def main():
         if not validate_arguments(args):
             sys.exit(1)
 
+        coverage = False
+        if args.coverage:
+            coverage = True
+
         matches = match_binaries_to_inputs(args.binary, args.input)
         if not matches:
             print("No binary-to-input matches found. Exiting.")
@@ -122,19 +123,13 @@ def main():
 
         # iterate over all binaries in the binary folder
         for binary, input in matches.items():
-            # TODO: eventually create child classes of the parent Mutator and use that to distinguish
-            # between format types
-
             with open(input, "rb") as input_file:
                 input_data = input_file.read()
 
             # create new binary process
-            proc = ctx.Process(target=binary_process, args=(binary, input_data, 60))
+            proc = ctx.Process(target=binary_process, args=(binary, input_data, coverage, 60))
             proc.start()
             processes.append(proc)
-
-            # UNCOMMENT: if you want to run binaries sequentially
-            # runners.append(proc)
 
         # stop each runner (wait for processes/threads to complete safely)
         for proc in processes:

@@ -120,6 +120,9 @@ class BaseMutator(threading.Thread):
                 if result.crashed:
                     self.exec_log_file.write(f"Crash Type: {result.crash_type.value if result.crash_type else 'Unknown'}\n")
 
+                if result.coverage:
+                    self.exec_log_file.write(f"Coverage: {result.coverage}\n")
+
                 self.exec_log_file.write("\n--- STDOUT ---\n")
                 stdout_text = result.stdout
                 if isinstance(stdout_text, bytes):
