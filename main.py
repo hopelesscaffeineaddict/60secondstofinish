@@ -23,7 +23,7 @@ OUTPUT_DIR = "/fuzzer_output"
 
 processes = []
 
-def binary_process(binary_path, input_path, coverage, fuzz_time = 60):
+def binary_process(binary_path, input_path, coverage, processes_data, fuzz_time = 60):
     # event to signal runner process to stop
     stop_event = threading.Event()
     # condition the crash handler waits on (when waiting for a crash to analayse)
@@ -70,7 +70,6 @@ def binary_process(binary_path, input_path, coverage, fuzz_time = 60):
     finally:
         # clean up threads
         stop_event.set()
-        print(f"Stopping fuzzing for {binary_path} after {fuzz_time}s")
 
     # clean up threads
     stop_event.set()
@@ -82,23 +81,12 @@ def binary_process(binary_path, input_path, coverage, fuzz_time = 60):
 
     # get execution stats from Runner
     runner_stats = runner.stats
-    total_executions = runner_stats['total_executions']
 
     # get crash stats and timing from CrashHandler
     crash_stats = runner.crash_handler.get_statistics()
-    total_time = crash_stats['total_time']
-
-    # calculate executions per second to assess program speed
-    executions_per_second = 0
-    if total_time > 0:
-        executions_per_second = total_executions / total_time
 
     # per-binary fuzzer statistics in terminal
-    print(f"Total executions: {total_executions}")
-    print(f"Crashes found: {crash_stats['crashes_found']}")
-    print(f"Timeouts found: {crash_stats['timeouts_found']}")
-    print(f"Total time: {total_time:.2f}s")
-    print(f"Executions per second: {executions_per_second:.2f}")
+    processes_data[binary_name] = {"crash_stats": crash_stats, "runner_stats": runner_stats}
 
 def main():
     global processes
@@ -120,20 +108,46 @@ def main():
             sys.exit(1)
 
         ctx = mp.get_context("spawn")
+        manager = ctx.Manager()
+        processes_data = manager.dict()
 
         # iterate over all binaries in the binary folder
         for binary, input in matches.items():
             with open(input, "rb") as input_file:
                 input_data = input_file.read()
 
+            processes_data[os.path.basename(binary)] = {}
             # create new binary process
-            proc = ctx.Process(target=binary_process, args=(binary, input_data, coverage, 60))
+            proc = ctx.Process(target=binary_process, args=(binary, input_data, coverage, processes_data, 60))
             proc.start()
             processes.append(proc)
 
         # stop each runner (wait for processes/threads to complete safely)
         for proc in processes:
             proc.join()
+
+        print("\n================= FUZZING SUMMARY =================\n")
+        # print execution summary for each binary
+        for binary_name, proc_data in processes_data.items():
+            crash_stats = proc_data["crash_stats"]
+            runner_stats = proc_data["runner_stats"]
+
+            total_executions = runner_stats['total_executions']
+            total_time = crash_stats['total_time']
+            # calculate executions per second to assess program speed
+            executions_per_second = 0
+            if total_time > 0:
+                executions_per_second = total_executions / total_time
+
+            # per-binary fuzzer statistics in terminal
+            print(f"----- Fuzzing Execution Statistics for {binary_name} -----")
+            print(f"    * Total executions: {total_executions}")
+            print(f"    * Crashes found: {crash_stats['crashes_found']}")
+            print(f"    * Timeouts found: {crash_stats['timeouts_found']}")
+            print(f"    * Total time: {total_time:.2f}s")
+            print(f"    * Executions per second: {executions_per_second:.2f}\n\n")
+
+        print("===================================================")
 
     except Exception as e:
         print(f"Error during fuzzing: {e}")
