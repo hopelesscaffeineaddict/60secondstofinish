@@ -12,7 +12,7 @@
 
 /* Constants */
 #define BUFFER_LEN 4096
-#define MAX_OUTPUT_LEN 10000
+#define MAX_OUTPUT_LEN 50000
 #define MAX_COVERAGE_SIZE 65536
 #define MAX_BREAKPOINTS 10000
 
@@ -29,6 +29,10 @@ uint8_t coverage_bitmap[MAX_COVERAGE_SIZE];
 pid_t child_pid = -1;
 breakpoint breakpoints[MAX_BREAKPOINTS];
 int num_bps = 0;
+char out_buf[MAX_OUTPUT_LEN] = {0};
+char err_buf[MAX_OUTPUT_LEN] = {0};
+int out_len = 0;
+int err_len = 0;
 
 void load_fn_symbols(char *binary_path) {
     char cmd[1024];
@@ -65,6 +69,7 @@ uintptr_t get_base_addr(pid_t pid) {
     }
 
     uintptr_t base_addr = 0;
+    // first line of maps is the text segment base
     if (fgets(line, sizeof(line), fp)) {
         char *dash = strchr(line, '-');
         if (dash) {
@@ -126,6 +131,25 @@ void timeout_handler(int signal) {
     }
 }
 
+void print_output(int out_fd, int err_fd) {
+    char buffer[BUFFER_LEN];
+    ssize_t n;
+
+    while ((n = read(out_fd, buffer, sizeof(buffer))) > 0) {
+        if (out_len + n < MAX_OUTPUT_LEN - 1) {
+            memcpy(out_buf + out_len, buffer, n);
+            out_len += n;
+        }
+    }
+
+    while ((n = read(err_fd, buffer, sizeof(buffer))) > 0) {
+        if (err_len + n < MAX_OUTPUT_LEN - 1) {
+            memcpy(err_buf + err_len, buffer, n);
+            err_len += n;
+        }
+    }
+}
+
 int main(int argc, char *argv[]) {
     if (argc < 2) {
         fprintf(stderr, "Usage: %s <timeout_sec> <binary>\n", argv[0]);
@@ -134,6 +158,9 @@ int main(int argc, char *argv[]) {
 
     int timeout_seconds = atoi(argv[1]);
     char *binary_path = argv[2];
+
+    // detect all function/text segment symbols in the given binary
+    load_fn_symbols(binary_path);
 
     // create pipe to be able to redirect binary stdin/stdout/stderr and harness stdin/stdout/stderr
     int stdin_pipe[2];      // parent writes, child reads
@@ -170,7 +197,7 @@ int main(int argc, char *argv[]) {
 
         // allow parent to attach to process
         ptrace(PTRACE_TRACEME, 0, NULL, NULL);
-        raise(SIGSTOP);
+        // raise(SIGSTOP);
 
         // execute the binary with the input
         char *argv[] = {binary_path, NULL};
@@ -187,6 +214,7 @@ int main(int argc, char *argv[]) {
         close(stdout_pipe[1]);
         close(stderr_pipe[1]);
 
+        // wait for execve to finish
         waitpid(child_pid, &status, 0);
 
         // if ASLR is enabled, we need to find the base address to be able to compare with
@@ -197,6 +225,7 @@ int main(int argc, char *argv[]) {
             return 1;
         }
 
+        // set up actual address (i.e. offset + PIE base address)
         for (int i = 0; i < num_bps; i++) {
             breakpoints[i].addr = base_addr + breakpoints[i].offset;
             enable_breakpoint(child_pid, i);
@@ -206,25 +235,18 @@ int main(int argc, char *argv[]) {
         signal(SIGALRM, timeout_handler);
         alarm(timeout_seconds);
 
-        // input the stdin to the binary
-        char buffer[BUFFER_LEN];
-        ssize_t nbyte;
-        while ((nbyte = read(STDIN_FILENO, buffer, BUFFER_LEN)) > 0) {
-            if (write(stdin_pipe[1], buffer, nbyte) != nbyte) {
-                // failed to write all of the input to program stdin
-                break;
-            }
-        }
-        // closing read end of pipe will signal EOF for the child process
-        close(stdin_pipe[1]);
-
         // set pipes to nonblocking (so reads dont block ptrace loop)
         fcntl(stdout_pipe[0], F_SETFL, O_NONBLOCK);
         fcntl(stderr_pipe[0], F_SETFL, O_NONBLOCK);
 
-        char out_buf[MAX_OUTPUT_LEN] = {0};
-        char err_buf[MAX_OUTPUT_LEN] = {0};
-        int out_idx = 0, err_idx = 0;
+        // input the stdin to the binary
+        char buffer[BUFFER_LEN];
+        ssize_t nbyte;
+        while ((nbyte = read(STDIN_FILENO, buffer, BUFFER_LEN)) > 0) {
+            write(stdin_pipe[1], buffer, nbyte);
+        }
+        // closing read end of pipe will signal EOF for the child process
+        close(stdin_pipe[1]);
 
         // resume execution
         ptrace(PTRACE_CONT, child_pid, NULL, NULL);
@@ -232,6 +254,8 @@ int main(int argc, char *argv[]) {
         // tracer loop
         while (WIFSTOPPED(status)) {
             waitpid(child_pid, &status, 0);
+
+            print_output(stdout_pipe[0], stderr_pipe[0]);
 
             if (WIFEXITED(status) || WIFSIGNALED(status)) {
                 break;
@@ -267,11 +291,14 @@ int main(int argc, char *argv[]) {
             }
         }
 
+        // write any last output that could've been flushed after process died
+        print_output(stdout_pipe[0], stderr_pipe[0]);
+        out_buf[out_len] = '\0';
+        err_buf[err_len] = '\0';
+
         // disable queued timeout
         alarm(0);
 
-        read(stdout_pipe[0], out_buf + out_idx, sizeof(out_buf) - out_idx - 1);
-        read(stderr_pipe[0], err_buf + err_idx, sizeof(err_buf) - err_idx - 1);
         fprintf(stdout, "STDOUT:%s|STDERR:%s|", out_buf, err_buf);
 
         // record results for crash handler to analyse
