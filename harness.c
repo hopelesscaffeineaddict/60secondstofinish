@@ -163,9 +163,9 @@ int main(int argc, char *argv[]) {
     load_fn_symbols(binary_path);
 
     // create pipe to be able to redirect binary stdin/stdout/stderr and harness stdin/stdout/stderr
-    int stdin_pipe[2];      // parent writes, child reads
-    int stdout_pipe[2];     // child writes, parent reads
-    int stderr_pipe[2];     // child writes, parent reads
+    int stdin_pipe[2];      // harness writes, binary reads
+    int stdout_pipe[2];     // binary writes, harness reads
+    int stderr_pipe[2];     // binary writes, harness reads
     if (pipe(stdin_pipe) || pipe(stdout_pipe) || pipe(stderr_pipe)) {
         perror("pipe");
         return 1;
@@ -197,7 +197,6 @@ int main(int argc, char *argv[]) {
 
         // allow parent to attach to process
         ptrace(PTRACE_TRACEME, 0, NULL, NULL);
-        // raise(SIGSTOP);
 
         // execute the binary with the input
         char *argv[] = {binary_path, NULL};
@@ -312,7 +311,7 @@ int main(int argc, char *argv[]) {
         }
         fflush(stdout);
 
-        // record results for crash handler to analyse
+        // write results for crash handler to analyse to harness stderr
         if (WIFSIGNALED(status)) {
             int sig = WTERMSIG(status);
             if (sig == SIGKILL) {
@@ -324,7 +323,7 @@ int main(int argc, char *argv[]) {
             fprintf(stderr, "CRASH_TYPE:none|SIGNAL:0");
         }
 
-        // record the coverage results
+        // write the coverage results to harness stderr
         fprintf(stderr, "|COVERAGE:");
         bool first_cov = true;
         for (int i = 0; i < MAX_COVERAGE_SIZE; i++) {
