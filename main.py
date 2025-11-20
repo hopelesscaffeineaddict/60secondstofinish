@@ -4,6 +4,7 @@ import sys
 import multiprocessing as mp
 import queue
 import time
+import signal
 from format import get_format_from_bytes, FormatType
 from inputs import parse_arguments, validate_arguments, match_binaries_to_inputs
 
@@ -23,7 +24,10 @@ OUTPUT_DIR = "/fuzzer_output"
 
 processes = []
 
-def binary_process(binary_path, input_path, coverage, processes_data, fuzz_time = 60):
+def binary_process(binary_path, input_path, coverage, processes_data, global_stop_event, fuzz_time = 60):
+    # ignore keyboard interrupt signals (main will handle cleanup)
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
+
     # event to signal runner process to stop
     stop_event = threading.Event()
     # condition the crash handler waits on (when waiting for a crash to analayse)
@@ -63,16 +67,11 @@ def binary_process(binary_path, input_path, coverage, processes_data, fuzz_time 
     start_time = time.time()
     try:
         # check for timeout or crash detection
-        while time.time() - start_time < fuzz_time and not stop_event.is_set():
+        while time.time() - start_time < fuzz_time and not stop_event.is_set() and not global_stop_event.is_set():
             time.sleep(1)
-    except KeyboardInterrupt:
-        print(f"Fuzzing interrupted by user for {binary_path}")
     finally:
         # clean up threads
         stop_event.set()
-
-    # clean up threads
-    stop_event.set()
 
     runner.join(timeout=1)
     mutator.join(timeout=1)
@@ -110,6 +109,7 @@ def main():
         ctx = mp.get_context("spawn")
         manager = ctx.Manager()
         processes_data = manager.dict()
+        global_stop_event = ctx.Event()
 
         # iterate over all binaries in the binary folder
         for binary, input in matches.items():
@@ -118,13 +118,20 @@ def main():
 
             processes_data[os.path.basename(binary)] = {}
             # create new binary process
-            proc = ctx.Process(target=binary_process, args=(binary, input_data, coverage, processes_data, 60))
+            proc = ctx.Process(target=binary_process, args=(binary, input_data, coverage,
+                                                            processes_data, global_stop_event, 60))
             proc.start()
             processes.append(proc)
 
-        # stop each runner (wait for processes/threads to complete safely)
-        for proc in processes:
-            proc.join()
+        try:
+            # stop each runner (wait for processes/threads to complete safely)
+            for proc in processes:
+                proc.join()
+        except KeyboardInterrupt:
+            print('\nStopping Fuzzer Gracefully')
+            global_stop_event.set()
+            for proc in processes:
+                proc.join()
 
         print("\n================= FUZZING SUMMARY =================\n")
         # print execution summary for each binary
