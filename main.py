@@ -164,7 +164,7 @@ def main():
             print(f"    * Total time: {total_time:.2f}s")
             print(f"    * Executions per second: {executions_per_second:.2f}")
             if args.coverage:
-                print(f"    * Total Coverage: {runner_stats["total_coverage"] if runner_stats["total_coverage"] else "{}"}\n\n")
+                print(f"    * Total Coverage: {runner_stats['total_coverage'] if runner_stats['total_coverage'] else '{}'}\n\n")
             else:
                 print("\n")
 

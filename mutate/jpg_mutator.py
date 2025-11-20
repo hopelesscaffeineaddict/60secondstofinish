@@ -68,8 +68,8 @@ class JPGMutator(BaseMutator):
         ])
     
         try:
-            mutated_root = strategy(data)
-            return mutated_root
+            mutated_data = strategy(data)
+            return mutated_data
         except Exception:
             print(f'[ERROR] mutation failed')
             return data
@@ -80,7 +80,8 @@ class JPGMutator(BaseMutator):
         choice = random.choice(['modify', 'move'])
         if choice == 'modify':
             bytes = random.choice(self.magic_2bytes)
-            return bytes + data[2:]
+            new = bytes + data[2:]
+            return new
         else:
             pos = random.randrange(len(data) + 1)
             return data[2:pos] + b'\\xFF\\xD8' + data[pos:]
