@@ -85,6 +85,7 @@ def binary_process(binary_path, input_path, coverage, processes_data, global_sto
 
     # get execution stats from Runner
     runner_stats = runner.stats
+    runner_stats["total_coverage"] = runner.total_coverage
 
     # get crash stats and timing from CrashHandler
     crash_stats = runner.crash_handler.get_statistics()
@@ -157,7 +158,11 @@ def main():
             print(f"    * Crashes found: {crash_stats['crashes_found']}")
             print(f"    * Timeouts found: {crash_stats['timeouts_found']}")
             print(f"    * Total time: {total_time:.2f}s")
-            print(f"    * Executions per second: {executions_per_second:.2f}\n\n")
+            print(f"    * Executions per second: {executions_per_second:.2f}")
+            if args.coverage:
+                print(f"    * Total Coverage: {runner_stats["total_coverage"] if runner_stats["total_coverage"] else "{}"}\n\n")
+            else:
+                print("\n")
 
         print("===================================================")
 
