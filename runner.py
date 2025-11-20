@@ -75,8 +75,8 @@ class Runner(threading.Thread):
         except Exception as e:
             return ExecutionResult(
                 return_code = -2,
-                stdout = stdout,
-                stderr = stderr,
+                stdout = '',
+                stderr = '',
                 execution_time = time.time() - start_time,
                 crashed = False,
                 crash_type = CrashType.HARNESS_ERR,
