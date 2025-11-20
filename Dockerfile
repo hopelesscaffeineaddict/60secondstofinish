@@ -5,9 +5,8 @@ WORKDIR /app
 COPY *.py ./
 COPY mutate/ ./mutate/
 
-COPY ./midpoint_binaries/ ./midpoint_binaries/
-COPY ./midpoint_inputs/ ./midpoint_inputs/
+COPY harness.c .
+RUN apt-get update && apt-get install -y gcc
+RUN gcc harness.c -o harness
 
-RUN chmod +x ./midpoint_binaries/*
-
-CMD ["python3", "main.py", "--binary=binaries", "--input=example_inputs"]
+ENTRYPOINT ["python3", "main.py", "--binary=/binaries", "--input=/example_inputs"]

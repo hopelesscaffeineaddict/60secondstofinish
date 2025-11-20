@@ -8,5 +8,8 @@ rm -rf ~/60secondstofinish/fuzzer_output/*
 echo "Deleting old mutation logs in mutated_inputs..."
 rm -rf ~/60secondstofinish/mutated_inputs/*
 
+echo "Compiling harness.c..."
+gcc harness.c -o harness
+
 echo "Running fuzzer using binary directory '$1' and example inputs directory '$2'..."
-python3 main.py --binary="$1" --input="$2"
+python3 main.py --binary="$1" --input="$2" -c

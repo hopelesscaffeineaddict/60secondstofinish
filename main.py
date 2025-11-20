@@ -4,6 +4,7 @@ import sys
 import multiprocessing as mp
 import queue
 import time
+import signal
 from format import get_format_from_bytes, FormatType
 from inputs import parse_arguments, validate_arguments, match_binaries_to_inputs
 
@@ -12,6 +13,7 @@ from mutate.json_mutator import JSONMutator
 from mutate.csv_mutator import CSVMutator
 from mutate.xml_mutator import XMLMutator
 from mutate.mutator import GenericMutator
+from mutate.elf_mutator import ELFMutator
 
 from runner import Runner
 from crashes import CrashHandler
@@ -23,7 +25,10 @@ OUTPUT_DIR = "/fuzzer_output"
 
 processes = []
 
-def binary_process(binary_path, input_path, fuzz_time = 60):
+def binary_process(binary_path, input_path, coverage, processes_data, global_stop_event, fuzz_time = 60):
+    # ignore keyboard interrupt signals (main will handle cleanup)
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
+
     # event to signal runner process to stop
     stop_event = threading.Event()
     # condition the crash handler waits on (when waiting for a crash to analayse)
@@ -39,9 +44,6 @@ def binary_process(binary_path, input_path, fuzz_time = 60):
 
     mutator = None
     max_queue_size = 200
-
-    # if isinstance(mutator, CSVMutator):
-    #     mutator.parse_csv_structure()
 
     if input_format == FormatType.JSON:
         print(f"[{binary_name}] Detected JSON format. Using JSONMutator.")
@@ -60,7 +62,7 @@ def binary_process(binary_path, input_path, fuzz_time = 60):
         print(f"[{binary_name}] Using GenericMutator for format: {input_format.name}")
         mutator = GenericMutator(input_path, input_queue, stop_event, binary_name, max_queue_size)
 
-    runner = Runner(binary_path, input_queue, crash_handler, stop_event, mutator)
+    runner = Runner(binary_path, input_queue, crash_handler, stop_event, mutator, coverage)
 
     print(f"Starting fuzzing for {binary_path}")
     crash_handler.start()
@@ -69,18 +71,12 @@ def binary_process(binary_path, input_path, fuzz_time = 60):
 
     start_time = time.time()
     try:
-        # check for timeout or crash detection 
-        while time.time() - start_time < fuzz_time and not stop_event.is_set():
+        # check for timeout or crash detection
+        while time.time() - start_time < fuzz_time and not stop_event.is_set() and not global_stop_event.is_set():
             time.sleep(1)
-    except KeyboardInterrupt:
-        print(f"Fuzzing interrupted by user for {binary_path}")
     finally:
         # clean up threads
         stop_event.set()
-        print(f"Stopping fuzzing for {binary_path} after {fuzz_time}s")
-
-    # clean up threads
-    stop_event.set()
 
     runner.join(timeout=1)
     mutator.join(timeout=1)
@@ -89,23 +85,13 @@ def binary_process(binary_path, input_path, fuzz_time = 60):
 
     # get execution stats from Runner
     runner_stats = runner.stats
-    total_executions = runner_stats['total_executions']
+    runner_stats["total_coverage"] = runner.total_coverage
 
     # get crash stats and timing from CrashHandler
     crash_stats = runner.crash_handler.get_statistics()
-    total_time = crash_stats['total_time']
-
-    # calculate executions per second to assess program speed
-    executions_per_second = 0
-    if total_time > 0:
-        executions_per_second = total_executions / total_time
 
     # per-binary fuzzer statistics in terminal
-    print(f"Total executions: {total_executions}")
-    print(f"Crashes found: {crash_stats['crashes_found']}")
-    print(f"Timeouts found: {crash_stats['timeouts_found']}")
-    print(f"Total time: {total_time:.2f}s")
-    print(f"Executions per second: {executions_per_second:.2f}")
+    processes_data[binary_name] = {"crash_stats": crash_stats, "runner_stats": runner_stats}
 
 def main():
     global processes
@@ -117,32 +103,68 @@ def main():
         if not validate_arguments(args):
             sys.exit(1)
 
+        coverage = False
+        if args.coverage:
+            coverage = True
+
         matches = match_binaries_to_inputs(args.binary, args.input)
         if not matches:
             print("No binary-to-input matches found. Exiting.")
             sys.exit(1)
 
         ctx = mp.get_context("spawn")
+        manager = ctx.Manager()
+        processes_data = manager.dict()
+        global_stop_event = ctx.Event()
 
         # iterate over all binaries in the binary folder
         for binary, input in matches.items():
-            # TODO: eventually create child classes of the parent Mutator and use that to distinguish
-            # between format types
-
             with open(input, "rb") as input_file:
                 input_data = input_file.read()
 
+            processes_data[os.path.basename(binary)] = {}
             # create new binary process
-            proc = ctx.Process(target=binary_process, args=(binary, input_data, 60))
+            proc = ctx.Process(target=binary_process, args=(binary, input_data, coverage,
+                                                            processes_data, global_stop_event, 60))
             proc.start()
             processes.append(proc)
 
-            # UNCOMMENT: if you want to run binaries sequentially
-            # runners.append(proc)
+        try:
+            # stop each runner (wait for processes/threads to complete safely)
+            for proc in processes:
+                proc.join()
+        except KeyboardInterrupt:
+            print('\nStopping Fuzzer Gracefully')
+            global_stop_event.set()
+            for proc in processes:
+                proc.join()
 
-        # stop each runner (wait for processes/threads to complete safely)
-        for proc in processes:
-            proc.join()
+        print("\n================= FUZZING SUMMARY =================\n")
+        # print execution summary for each binary
+        for binary_name, proc_data in processes_data.items():
+            crash_stats = proc_data["crash_stats"]
+            runner_stats = proc_data["runner_stats"]
+
+            total_executions = runner_stats['total_executions']
+            total_time = crash_stats['total_time']
+            # calculate executions per second to assess program speed
+            executions_per_second = 0
+            if total_time > 0:
+                executions_per_second = total_executions / total_time
+
+            # per-binary fuzzer statistics in terminal
+            print(f"----- Fuzzing Execution Statistics for {binary_name} -----")
+            print(f"    * Total executions: {total_executions}")
+            print(f"    * Crashes found: {crash_stats['crashes_found']}")
+            print(f"    * Timeouts found: {crash_stats['timeouts_found']}")
+            print(f"    * Total time: {total_time:.2f}s")
+            print(f"    * Executions per second: {executions_per_second:.2f}")
+            if args.coverage:
+                print(f"    * Total Coverage: {runner_stats["total_coverage"] if runner_stats["total_coverage"] else "{}"}\n\n")
+            else:
+                print("\n")
+
+        print("===================================================")
 
     except Exception as e:
         print(f"Error during fuzzing: {e}")
