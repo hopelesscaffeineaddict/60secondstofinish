@@ -94,7 +94,15 @@ Relatively similar to CSV, just for key/array
 - CSV
 - ELF
 - Plaintext
-- XML (eugenia/arhaan)
+- XML
+	- Structural mutations:
+		- Adding a random number of child nodes to the main root node
+		- Recursively adding children nodes from a starting node
+		- Deleting a random node from the tree
+	- href mutations
+		- Changing link contents to be a random choice of special string inputs
+	- Content mutations
+		- Changing the contents of a node to be a random choice of special string inputs
 - JPEG (eugenia/arhaan)
 - ELF:
 	- Header mutations (structural). Mutates fields inside the ELF header like e_phoff, e_phnum, e_ehsize, and e_phentsize.
