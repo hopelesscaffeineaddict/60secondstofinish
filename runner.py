@@ -34,9 +34,6 @@ class Runner(threading.Thread):
                 result = self.execute_input(input_data)
             self.stats["total_executions"] += 1
 
-            # log execution results
-            self.mutator.log_execution(input_data, result)
-
             if result.crashed:
                 # add the new crash results to the crash handler queue
                 with self.crash_handler.condition:
@@ -93,7 +90,7 @@ class Runner(threading.Thread):
                 return_code, '', '', execution_time, False, None, None, None
             )
 
-        # TODO: for cleaner code, maybe wrap these in try/except block
+        # extract the binary output as returned by the c harness
         binary_output = stdout.decode("utf-8", errors="ignore")
         if '|STDERR:' in binary_output:
             parts = binary_output.split('|STDERR:')
@@ -117,8 +114,10 @@ class Runner(threading.Thread):
                         harness_result[key.strip()] = value.strip()
 
             except ValueError:
-                # TODO: dont know how I want to handle this error atm
-                pass
+                return ExecutionResult(
+                    signal, stdout_str, stderr_str,
+                    execution_time, False, None, None, coverage
+                )
 
             crashed = False
             crash_type = harness_result.get('CRASH_TYPE', '')
@@ -156,7 +155,6 @@ class Runner(threading.Thread):
         start_time = time.time()
         try:
             # create subprocess for binary to run
-            # tbh don't know if this is the correct args or not
             proc = subprocess.Popen(
                 [self.binary_path],
                 stdin=subprocess.PIPE,
@@ -209,8 +207,7 @@ class Runner(threading.Thread):
 
     # analyse execution results to determine if a crash occurred
     def analyse_crash(self, return_code: int, stderr: bytes):
-        # better crash analysis w pattern matching from models.py
-        # i really don't know if this works i'm just throwing shit at the wall
+        # check for known patterns to detect type of crash
         stderr_str = stderr.decode("utf-8", errors="ignore").lower()
         crash_patterns = {
             "stack smashing": CrashType.STACKSMASH,
