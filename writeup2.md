@@ -1,6 +1,7 @@
 ## How 60secondstofinish works 
 ### Overview 
 60secondstofinish is a black box coverage guided fuzzer targeting binaries that accept both structured and semi-structured formats, namely CSV, JSON, ELF, JPEG, XML and plaintext. The system mutates example inputs and executes the target binary to detect crashes, hangs, and unexpected behaviour.
+
 ## Mutation Framework
 All format-specific mutators inherit from `BaseMutator`, which manages mutation logging, handles stderr/stdout collection, stores the evolving input state , and supports chainable mutations, where each mutation builds on the previous one.
 
@@ -42,6 +43,7 @@ Relatively similar to CSV, just for key/array
 - Buffer overflows (eg. json1/csv1)
 - plaintext3?? 
 - 
+
 ## Fuzzer Improvements
 **Process Resource Monitoring**
 We could implement continuous tracking of peak RSS memory, as well as total CPU time, thread count, and file descriptors and handles open/used so as to detect memory leaks, CPU spikes or infinite loops/hangs, as well as resource exhaustion.
@@ -49,7 +51,7 @@ We could implement continuous tracking of peak RSS memory, as well as total CPU 
 This would be implemented using 
 
 **More advanced ELF Mutation Strategies**
-
+Currently, our ELF mutation strategies comprise random insertion/deletion of a block of bytes in the ELF body. This does not utilise ELF loader logic. As such, future ELF mutation strategies could be aware of the ELF file format, including the program header table (PHT) 
 
 **PDF Mutation Strategies**
 Introducing format specific mutation strategies for PDF inputs, which would entail:
@@ -57,3 +59,5 @@ Introducing format specific mutation strategies for PDF inputs, which would enta
 2. Mutation targets include broken `xref` offsets, oversized object lengths, malformed dictionaries, as well as uncompressed and compressed stream corruption
 This would require partial parsing to enable structurally aware mutations instead of random byte edits to ensure the input remains valid.
 
+**Smarter Mutations based off of coverage feedback** (please confirm)
+- implemented coverage 
