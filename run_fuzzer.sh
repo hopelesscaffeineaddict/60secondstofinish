@@ -31,6 +31,15 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
+coverage=0
+for arg in "$@"; do
+    case "$arg" in
+        -c|--coverage)
+            coverage=1
+            ;;
+    esac
+done
+
 echo "Deleting old fuzzer output files."
 rm 'fuzzer_output/*' 2>/dev/null
 
@@ -44,4 +53,9 @@ echo "Docker container built successfully"
 
 # Run the image, mounting /binaries as read-only and /fuzzer_output
 echo "Running Fuzzer"
-docker run -v ./binaries:/binaries:ro -v ./example_inputs:/example_inputs:ro -v ./fuzzer_output:/fuzzer_output fuzzer-image
+docker run \
+    -v ./binaries:/binaries:ro \
+    -v ./example_inputs:/example_inputs:ro \
+    -v ./fuzzer_output:/fuzzer_output \
+    fuzzer-image \
+    $( [ $coverage -eq 1 ] && echo "--coverage" )

@@ -1,7 +1,6 @@
-# 60secondstofinish
-COMP6447 Fuzzer
+# 60secondstofinish - COMP6447 Fuzzer
 
-# Fuzzer Design and Functionality
+## Fuzzer Design and Functionality
 
 The **60secondstofinish** fuzzer is designed to discover vulnerabilities in binary executables through randomised input mutation and controlled execution. 
 
@@ -12,7 +11,7 @@ Given a directory containing multiple binaries, the system spawns a new fuzzing 
 
 These threads operate concurrently to maximise efficiency and ensure input generation, execution, and crash analysis proceed in parallel.
 
-## Mutator:
+### Mutator:
 The mutator thread is responsible for generating test inputs.
 
 This is done by randomly applying a diverse set of mutation strategies on a valid example input for the target binary. Once generated, these test inputs are enqueued into a shared “input queue”, which is then used by the runner thread.
@@ -32,7 +31,7 @@ CSVMutator: It contains two mutation layers, namely field level and row level, w
 
 JSONMutator: Strategies include mutating numeric/boolean values, type substitution, adding/removing key value pairs, as well as modifying array structures or inserting nested JSON objects.
 
-## Runner:
+### Runner:
 The runner thread serves as the main execution harness for the target binary.
 
 It repeatedly fetches mutated inputs from the queue and executes the binary using these inputs.
@@ -41,7 +40,7 @@ During execution, the runner detects any non-expected termination signals or han
 
 This harness thread isolation ensures each execution of the binary is sandboxed and recoverable. If the target binary hangs or crashes, the runner can terminate and restart cleanly without affecting the rest of our fuzzer processes.
 
-## Crash Handler
+### Crash Handler
 The crash handler thread dequeues entries from the crashes queue.
 
 It is responsible for persisting the crash data into a binary crash output file (which can be used for later analysis). In particular, two crash files are written:
@@ -53,35 +52,18 @@ It is responsible for persisting the crash data into a binary crash output file 
 
 This thread runs independently to ensure that writing results to files does not block or bottleneck ongoing fuzzing processing.
 
+## How to run
 
-### Project Directory Structure 
-fuzzer_project/
-├── Dockerfile                 # Required for submission
-├── requirements.txt           # Python dependencies (if any)
-├── main.py                    # Entry point of the fuzzer
-├── README.md                  # Project documentation
-│
-├── src/                       # Core fuzzer logic
-│   ├── __init__.py
-│   ├── input_parser.py        # Argument parsing and validation
-│   ├── binary_detector.py     # Detects input format (JSON, XML, etc.)
-│   ├── harness.py             # Executes target and detects crashes
-│   ├── mutator.py             # The mutation engine
-│   ├── stats_collector.py     # Tracks and reports statistics
-│   └── fuzzer.py              # Main Fuzzer class that orchestrates everything
-│
-├── format_handlers/           # Format-specific mutation logic
-│   ├── __init__.py
-│   ├── base_handler.py        # Abstract base class for handlers
-│   ├── json_handler.py        # Mutations for JSON files
-│   ├── xml_handler.py         # Mutations for XML files
-│   ├── csv_handler.py         # Mutations for CSV files
-│   ├── jpeg_handler.py        # Mutations for JPEG files
-│   ├── elf_handler.py         # Mutations for ELF files
-│   ├── pdf_handler.py         # Mutations for PDF files
-│   └── plaintext_handler.py   # Mutations for generic text
-│
-└── binaries/                     # Binaries
-│
-└── input_files/                  # Provided example input   
+To run fuzzer in Docker, check required folders and compile harness use:
+```
+./run_fuzzer.sh
+```
+With coverage:
+```
+./run_fuzzer.sh [-c/--coverage]
+```
 
+Otherwise, you can also run the fuzzer without Docker using:
+```
+python3 main.py --binary={binaries_directory} --input={inputs_directory} [-c/--coverage]
+```
