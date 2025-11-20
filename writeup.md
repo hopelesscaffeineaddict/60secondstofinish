@@ -62,6 +62,26 @@ Mutations may apply globally to the full input, or per-line when the input is ne
 3. Content mutations
     - Changing the contents of a node to be a random choice of special string inputs
 
+**JPEG Mutation Strategies**
+1. SOI (Start of Image) Mutations
+   * Modify the `FF D8` signature to break initial JPEG parsing
+   * Relocate the SOI marker to a different offset in the file
+2. **APP0 (JFIF) Mutations
+   * Corrupt segment length to trigger size misinterpretation
+   * Modify identifier, version, or density fields with boundary or random values
+3. DQT (Quantization Table) Mutations
+   * Change declared segment length to mismatch the encoded data size
+   * Modify precision or quantization entries to disrupt decoder assumptions
+4. SOF (Start of Frame) Mutations
+   * Overwrite height, width, or length fields with extreme integers
+   * Modify component counts (e.g., 3 → `FF`) to trigger excessive allocation or read overflow
+5. DHT (Huffman Table) Mutations
+   * Corrupt segment length, class identifiers, symbol lengths, or value fields
+   * Introduce malformed Huffman metadata to break decoding logic
+6. EOI (End of Image) Mutations
+   * Move the `FF D9` marker earlier to force early termination
+   * Remove or corrupt EOI to cause out‑of‑bounds or unterminated parsing
+
 **ELF Mutation Strategies**
 1. Header mutations
     - Modify e_phoff, e_phnum, e_ehsize, phentsize, shentsize
@@ -72,6 +92,7 @@ Mutations may apply globally to the full input, or per-line when the input is ne
     - Delete a random block from the file body while preserving the first 0x40 bytes
 4. Byte-level mutations
     - Bit flips, random byte substitutions, or zeroing arbitrary bytes across the file
+
 
 ### How Harness Works 
 Our harness executes the target binary under `ptrace`, injects breakpoints at every discovered function symbol, and monitors execution to collect real-time coverage. All functions are automatically found via `nm`. At runtime, these offsets are rebased to support PIE and injects `int3` traps, which allows the harness to record every function reached during execution, thus implementing coverage. 
