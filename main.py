@@ -14,6 +14,7 @@ from mutate.csv_mutator import CSVMutator
 from mutate.xml_mutator import XMLMutator
 from mutate.mutator import GenericMutator
 from mutate.elf_mutator import ELFMutator
+from mutate.jpg_mutator import JPGMutator
 
 from runner import Runner
 from crashes import CrashHandler
@@ -57,6 +58,9 @@ def binary_process(binary_path, input_path, coverage, processes_data, global_sto
     elif input_format == FormatType.ELF:
         print(f"[{binary_name}] Detected ELF format. Using ELFMutator.")
         mutator = ELFMutator(input_path, input_queue, stop_event, binary_name, max_queue_size)
+    elif input_format == FormatType.JPEG:
+        print(f"[{binary_name}] Detected JPEG format. Using JPGMutator.")
+        mutator = JPGMutator(input_path, input_queue, stop_event, binary_name, max_queue_size)
     else:
         # fallback to generic mutator
         print(f"[{binary_name}] Using GenericMutator for format: {input_format.name}")
@@ -160,7 +164,7 @@ def main():
             print(f"    * Total time: {total_time:.2f}s")
             print(f"    * Executions per second: {executions_per_second:.2f}")
             if args.coverage:
-                print(f"    * Total Coverage: {runner_stats["total_coverage"] if runner_stats["total_coverage"] else "{}"}\n\n")
+                print(f"    * Total Coverage: {runner_stats['total_coverage'] if runner_stats['total_coverage'] else '{}'}\n\n")
             else:
                 print("\n")
 

@@ -14,7 +14,7 @@ class XMLMutator(BaseMutator):
         self.str_payloads = {
             "format_str": "%100c%100$n",
             "xss": "javascript:alert(1)",
-            "large_str": "A" * 2000,
+            "large_str": "A" * 5000,
             # control chars
             "null": "\0",
             "backspace": "\b",

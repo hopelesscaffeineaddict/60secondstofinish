@@ -37,12 +37,12 @@ def get_format_from_bytes(input_data: bytes, binary_path) -> FormatType:
 
     if is_json(input_slice):
         return FormatType.JSON
+    elif is_jpeg(input_slice):
+        return FormatType.JPEG
     elif is_csv(input_slice):
         return FormatType.CSV
     elif is_xml(input_slice):
         return FormatType.XML
-    elif is_jpeg(input_slice):
-        return FormatType.JPEG
     elif is_pdf(input_slice):
         return FormatType.PDF
     elif is_elf(input_slice):
