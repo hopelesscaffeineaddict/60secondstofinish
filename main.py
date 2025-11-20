@@ -13,6 +13,7 @@ from mutate.json_mutator import JSONMutator
 from mutate.csv_mutator import CSVMutator
 from mutate.xml_mutator import XMLMutator
 from mutate.mutator import GenericMutator
+from mutate.elf_mutator import ELFMutator
 
 from runner import Runner
 from crashes import CrashHandler
@@ -38,7 +39,8 @@ def binary_process(binary_path, input_path, coverage, processes_data, global_sto
     # create mutator, crash handler and runner threads
     binary_name = os.path.basename(binary_path)
     crash_handler = CrashHandler(binary_path, crash_condition, stop_event)
-    input_format = get_format_from_bytes(input_path)
+    input_format = get_format_from_bytes(input_path, binary_path)
+    print(f'[DEBUG] binary_path {binary_path}')
 
     mutator = None
     max_queue_size = 200
@@ -52,6 +54,9 @@ def binary_process(binary_path, input_path, coverage, processes_data, global_sto
     elif input_format == FormatType.XML:
         print(f"[{binary_name}] Detected XML format. Using XMLMutator.")
         mutator = XMLMutator(input_path, input_queue, stop_event, binary_name, max_queue_size)
+    elif input_format == FormatType.ELF:
+        print(f"[{binary_name}] Detected ELF format. Using ELFMutator.")
+        mutator = ELFMutator(input_path, input_queue, stop_event, binary_name, max_queue_size)
     else:
         # fallback to generic mutator
         print(f"[{binary_name}] Using GenericMutator for format: {input_format.name}")

@@ -28,3 +28,28 @@ echo '{"0":-19001020089231092381092830193801923,"1":1,"2":2,"3":3,"4":4,"5":5,"6
 ~/60secondstofinish/binaries/json1 < ~/60secondstofinish/fuzzer_output/bad_json1.txt
 ~/60secondstofinish/binaries/json2 < ~/60secondstofinish/fuzzer_output/bad_json2.txt
 ~/60secondstofinish/binaries/plaintext1 < ~/60secondstofinish/fuzzer_output/bad_plaintext1.txt
+
+ELF Testing
+
+Week 5
+~/60secondstofinish/elf_binaries/blind < ~/60secondstofinish/fuzzer_output/bad_blind.txt
+~/60secondstofinish/elf_binaries/stack-dump < ~/60secondstofinish/fuzzer_output/bad_stack-dump.txt
+~/60secondstofinish/elf_binaries/jump < ~/60secondstofinish/fuzzer_output/bad_jump.txt
+
+Week 4
+~/60secondstofinish/elf_binaries/formatrix < ~/60secondstofinish/fuzzer_output/bad_formatrix.txt
+~/60secondstofinish/elf_binaries/ftx < ~/60secondstofinish/fuzzer_output/bad_ftx.txt
+~/60secondstofinish/elf_binaries/tetris < ~/60secondstofinish/fuzzer_output/bad_tetris.txt
+
+Week 3 
+
+
+Week 2 
+~/60secondstofinish/elf_binaries/blind < ~/60secondstofinish/fuzzer_output/bad_blind.txt
+~/60secondstofinish/elf_binaries/stack-dump < ~/60secondstofinish/fuzzer_output/bad_stack-dump.txt
+~/60secondstofinish/elf_binaries/jump < ~/60secondstofinish/fuzzer_output/bad_jump.txt
+
+
+Week 1
+~/60secondstofinish/elf_binaries/intro < ~/60secondstofinish/fuzzer_output/bad_intro.txt
+~/60secondstofinish/elf_binaries/too-slow < ~/60secondstofinish/fuzzer_output/bad_too-slow.txt
