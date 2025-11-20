@@ -1,4 +1,3 @@
 __pycache__/
-mutated_inputs/
 fuzzer_output/
 binaries/

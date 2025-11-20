@@ -37,6 +37,10 @@ def parse_arguments():
         "--threads", "-s", type=int, default=8, help="Number of parallel threads per binary (default: 8)"
     )
 
+    parser.add_argument(
+        "--coverage", "-c", action="store_true", help="Run binaries with a coverage detector"
+    )
+
     return parser.parse_args()
 
 # TODO: Complete function for validating CLI arguments (eg. check whether directory paths exist, check

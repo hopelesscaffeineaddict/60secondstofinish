@@ -41,14 +41,12 @@ class CrashHandler(threading.Thread):
                 new_crash = self.crashes.pop(0)
 
             # process new crash
-            # print(new_crash)
             result = new_crash["result"]
             crash_input = new_crash["input"]
 
             # track crash types
             if result.crashed:
                 self.stats['crashes_found'] += 1
-
                 crash_type_str = "unknown"
 
                 if result.crash_type:
@@ -72,33 +70,15 @@ class CrashHandler(threading.Thread):
         with open(out_file, "ab") as f:
             f.write(crash_input)
 
-        #  generate crash report
-        report_file = os.path.join(OUTPUT_DIR, f"{self.binary}_crashreport.txt")
-        with open(report_file, "w") as f:
-            f.write(f"Crash Report for {self.binary}\n")
-            f.write(f"Crash Type: {result.crash_type.value if result.crash_type else 'Unknown'}\n")
-            f.write(f"Return Code: {result.return_code}\n")
-            f.write(f"Signal: {result.signal}\n")
-            f.write(f"Execution Time: {result.execution_time:.4f} seconds\n\n")
-
-            f.write("stderr output:\n")
-            f.write(result.stderr.decode('utf-8', errors='ignore'))
-
-            f.write("stdout output:\n")
-            f.write(result.stdout.decode('utf-8', errors='ignore'))
-
-            f.write("input data:\n")
-            f.write(repr(crash_input[:1024]))
-            if len(crash_input) > 1024:
-                f.write(f"\n... ({len(crash_input) - 1024} more bytes)")
-
-        print(f"[SUCCESS] Crash found for {self.binary}! Type: {result.crash_type.value if result.crash_type else 'Unknown'}")
-        print(f"[CRASH INPUT SAVED] Saved crashing input to {out_file}")
-        print(f"[REPORT SAVED] Detailed report saved to {report_file}")
-
-        stderr_preview = result.stderr.decode('utf-8', errors='ignore')[:200]
-        if stderr_preview:
-            print(f"[+] stderr preview: {stderr_preview}...")
+        # print crash report
+        print(f"\n[SUCCESS] Crash found for {self.binary}!")
+        print(f'    * Crash Type: {result.crash_type.value if result.crash_type else "Unknown"}')
+        print(f'    * Return Code: {result.return_code}')
+        print(f'    * Execution Time: {result.execution_time:.4f} seconds')
+        print(f'    * Coverage Offsets: {result.coverage}')
+        print(f'    * Stdout: {result.stdout}')
+        print(f'    * Stderr: {result.stderr}')
+        print(f"[CRASH INPUT SAVED] Saved crashing input to {out_file}\n")
 
     # return current stats
     def get_statistics(self):

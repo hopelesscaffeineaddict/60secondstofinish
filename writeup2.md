@@ -35,25 +35,52 @@ Relatively similar to CSV, just for key/array
 	- block mutations.
 		- insert/delete a block of bytes of random size anywhere in the elf body, preserving the first 0x40 bytes (elf header + safezone)
 
-### How Harness Works (sara)
+### Coverage Harness
+The c harness is an optional ptrace-based wrapper harness designed to run a given target binary whilst monitoring its execution. Specifically, it collects output from the child process, detects crashes and records coverage information by inserting breakpoints into the binary's text segment.
+
+#### How the harness works
+1. Symbol/breakpoint identification
+	* the harness extracts all function entry addresses using `nm` and records their offsets.
+	* due to ASLR/PIE security mechanisms, we calculate the real breakpoint addresses by reading the `/proc/<pid>/maps` base address and adding the `nm` offsets.
+
+2. Process startup/tracing setup
+	* the target binary is executed as a child process under `ptrace(PTRACE_TRACEME)`, enabling the parent to attach to the process.
+	* I/O is redirected so we can capture the child's output (for crash detection/analysis)
+
+3. Breakpoint insertion
+	* for each identified function entry address, we setup a breakpoint.
+	* this is done by overwriting the lowest byte with opcode `0xCC` (which refers to the `INT 3` assembly instruction which functions as a breakpoint)
+
+4. Execution loop
+	* child begins running and on a `SIGTRAP` we analyse the registers and signals (if a crash is detected we output the relevant information to enable the python `Runner` to analyse).
+	* coverage is also recorded as a bitmap indexed by the hash of the function entry address
+	* a timeout is also implemented to detect any hangs/infinite loops, and effectively terminates the child process.
 
 ## Bugs we could find 
 - Out of bounds read/write (eg. plaintext2)
 - Format string vulnerabilities (eg. xml1/2? unsure.)
-- Buffer overflows (eg. json1/csv1)
-- plaintext3?? 
+- Buffer overflows (eg. json1/csv1/plaintext3)
 - 
 
 ## Fuzzer Improvements
-**Process Resource Monitoring**
+**Process Resource Monitoring**\
 We could implement continuous tracking of peak RSS memory, as well as total CPU time, thread count, and file descriptors and handles open/used so as to detect memory leaks, CPU spikes or infinite loops/hangs, as well as resource exhaustion.
 
 This would be implemented using 
 
 **More advanced ELF Mutation Strategies**
 Currently, our ELF mutation strategies comprise random insertion/deletion of a block of bytes in the ELF body. This does not utilise ELF loader logic. As such, future ELF mutation strategies could be aware of the ELF file format, including the program header table (PHT) 
+**Coverage Harness Precision**\
+We could further utilise the ptrace functionalities to detect hangs and infinite loops more accurately by monitoring register changes (e.g. repeating RIP address) rather than relying on a timeout handler to assume a hang/infinite loop event has occurred.
 
-**PDF Mutation Strategies**
+However, our current breakpoint mechanism limits our register detection to only be at function boundaries, meaning implementing the above would only detects stalls at function calls and not within internal loops/function logic.
+
+To make this truly more efficient, we would need an instruction-by-instruction stepping mechanism, which would also enable a more accurate coverage detection (for determining better path distinctions). However, this instruction stepping alternative is computationally impractical due to the significant ptrace overheads.
+
+**More advanced ELF Mutation Strategies**\
+...
+
+**PDF Mutation Strategies**\
 Introducing format specific mutation strategies for PDF inputs, which would entail:
 1. Structural parsing of PDF objects via `xref`, `obj`, streams, and dictionary keys 
 2. Mutation targets include broken `xref` offsets, oversized object lengths, malformed dictionaries, as well as uncompressed and compressed stream corruption
