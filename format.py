@@ -31,7 +31,7 @@ def format_type(example_input_file: str) -> FormatType:
     return get_format_from_bytes(input_bytes)
 
 # Determines the format type from a byte string
-def get_format_from_bytes(input_data: bytes) -> FormatType:
+def get_format_from_bytes(input_data: bytes, binary_path) -> FormatType:
 
     input_slice = input_data[:2048]
 
