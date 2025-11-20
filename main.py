@@ -11,6 +11,7 @@ from mutate.base import BaseMutator
 from mutate.json_mutator import JSONMutator
 from mutate.csv_mutator import CSVMutator
 from mutate.xml_mutator import XMLMutator
+from mutate.jpg_mutator import JPGMutator
 from mutate.mutator import GenericMutator
 
 from runner import Runner
@@ -55,6 +56,9 @@ def binary_process(binary_path, input_path, fuzz_time = 60):
     elif input_format == FormatType.ELF:
         print(f"[{binary_name}] Detected ELF format. Using ELFMutator.")
         mutator = ELFMutator(input_path, input_queue, stop_event, binary_name, max_queue_size)
+    elif input_format == FormatType.JPEG:
+        print(f"[{binary_name}] Detected JPEG format. Using JPGMutator.")
+        mutator = JPGMutator(input_path, input_queue, stop_event, binary_name, max_queue_size)
     else:
         # fallback to generic mutator
         print(f"[{binary_name}] Using GenericMutator for format: {input_format.name}")
