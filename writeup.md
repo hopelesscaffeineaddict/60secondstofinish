@@ -95,18 +95,18 @@ Mutations may apply globally to the full input, or per-line when the input is ne
 
 
 ### How Harness Works 
-Our harness executes the target binary under `ptrace`, injects breakpoints at every discovered function symbol, and monitors execution to collect real-time coverage. All functions are automatically found via `nm`. At runtime, these offsets are rebased to support PIE and injects `int3` traps, which allows the harness to record every function reached during execution, thus implementing coverage. 
+Our optional harness executes the target binary under `ptrace` (specifically `PTRACE_TRACEME`), injects breakpoints at every discovered function symbol, and monitors execution to collect real-time coverage. All functions are automatically found via `nm`. At runtime, these offsets are rebased to support PIE and injects `int3` traps, which allows the harness to record every function reached during execution, thus implementing coverage. 
 
 Each trap logs the function offset into a bitmap, producing function level coverage data that can be used for corpus ranking and prioritisation. This coverage effectively enables the fuzzer to detect new paths and focus mutations on inputs that expand reachable code regions.
 
 I/O is fully piped, so the harness controls stdin, and  fully captures stdout and stderr. 
 
-Output streams are captured into buffers for later analysis. A timeout handler uses alarm and forcefully kills the child if it hangs, allowing the system to detect infinite loops. Final results report whether the run crashed, timed out, or completed normally, along with the collected coverage map and captured program output.
+Output streams are captured into buffers for later analysis. The execution loop monitors `SIGTRAP` signals to handle breakpoints and crashes. A timeout handler uses alarm and forcefully kills the child if it hangs, allowing the system to detect infinite loops. Final results report whether the run crashed, timed out, or completed normally, along with the collected coverage map and captured program output.
 
 ## Bugs we could find 
 - Out of bounds read/write typically trigerred by missing validation and underlying assumptions that buffer/array indices are assumed to be within bounds (eg. plaintext2/3)
-- Buffer overflows
-- Format string vulnerabilities 
+- Buffer overflows (e.g. json1, csv1, plaintext3)
+- Format string vulnerabilities (e.g.
 
 ## Fuzzer Improvements
 **Process Resource Monitoring**
@@ -125,3 +125,13 @@ This would require partial parsing to enable structurally aware mutations instea
 
 **Enhanced Crash Statistics**
 We could extend the crash handler to capture the register dump, the specific instruction pointer that has segfaulted using `ptrace`, as well as the address sanitiser and undefined behaviour sanitiser logs.
+
+**Coverage Harness Precision**
+We could further utilise the `ptrace` functionalities to detect hangs and infinite loops more accurately by monitoring register changes (e.g. repeating RIP address) rather than relying on a timeout handler to assume a hang/infinite loop event has occurred
+
+However, our current breakpoint mechanism limits our register detection to only be at function boundaries, meanining implementing the above would only detect stalls at function calls and not within internal loops/function logic.
+
+To make this more efficient, we would need an instruction-by-instruction stepping mechanism, which would also enable a more accurate coverage detection (for determining better path distinctions). However, this instruction stepping alternative is computationally impractical due to significant `ptrace` overheads. 
+
+**Smarter Mutations based off coverage feedback**
+We could implement smarter mutation strategies that utilise the collected coverage feedback to guide the fuzzing process. Currently, the covergae is used for corpus ranking and prioritisation, but it should be directly used to influence mutation decisions (e.g., if a mutation resulted in new coverage, prioritise similar mutations).

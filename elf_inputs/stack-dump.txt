@@ -1,3 +1,0 @@
-Now send me these bytes as decimal: 
-What is the secret flag hidden in this file?
-Well done! You have successfully completed the basics!
