@@ -239,7 +239,6 @@ class Runner(threading.Thread):
     def signal_to_crash_type(self, signal_num: int):
         signal_map = {
             signal.SIGSEGV: CrashType.SEGFAULT,
-            signal.SIGABRT: CrashType.ABORT,
             signal.SIGBUS: CrashType.INVALID_READ,
             signal.SIGFPE: CrashType.INVALID_READ,
         }

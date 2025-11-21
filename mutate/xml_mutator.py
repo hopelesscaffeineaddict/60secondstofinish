@@ -14,7 +14,7 @@ class XMLMutator(BaseMutator):
         self.str_payloads = {
             "format_str": "%100c%100$n",
             "xss": "javascript:alert(1)",
-            "large_str": "A" * 5000,
+            "large_str": "A",
             # control chars
             "null": "\0",
             "backspace": "\b",
@@ -118,6 +118,9 @@ class XMLMutator(BaseMutator):
         if isinstance(root, ET.Element):
             elements = list(root.iter())
             element = random.choice(elements)
-            payloads = list(self.str_payloads.values())
-            element.text = random.choice(payloads)
+            key, value = random.choice(list(self.str_payloads.items()))
+            if key == "large_str":
+                value = "A" * random.randint(1, 999999)
+
+            element.text = value
         return root

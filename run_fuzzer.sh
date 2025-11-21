@@ -54,8 +54,7 @@ echo "Docker container built successfully"
 # Run the image, mounting /binaries as read-only and /fuzzer_output
 echo "Running Fuzzer"
 docker run \
-    -v ./binaries:/binaries:ro \
-    -v ./example_inputs:/example_inputs:ro \
-    -v ./fuzzer_output:/fuzzer_output \
+    -v "$(pwd)":/app \
+    -w /app \
     fuzzer-image \
     $( [ $coverage -eq 1 ] && echo "--coverage" )

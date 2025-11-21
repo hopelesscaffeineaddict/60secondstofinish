@@ -58,7 +58,7 @@ def validate_arguments(args: argparse.Namespace) -> bool:
         return False
 
     # Create output directory if it doesn't exist
-    os.makedirs(args.output, exist_ok=True)
+    os.makedirs(args.output, mode=0o755, exist_ok=True)
 
     # Check if binary directory is empty
     binary_files = find_files(args.binary)
