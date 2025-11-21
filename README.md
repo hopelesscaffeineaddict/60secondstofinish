@@ -62,8 +62,3 @@ With coverage:
 ```
 ./run_fuzzer.sh [-c/--coverage]
 ```
-
-Otherwise, you can also run the fuzzer without Docker using:
-```
-python3 main.py --binary={binaries_directory} --input={inputs_directory} [-c/--coverage]
-```
