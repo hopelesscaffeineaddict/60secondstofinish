@@ -4,15 +4,17 @@ import time
 from pathlib import Path
 
 OUTPUT_DIR = "/fuzzer_output"
+COVERAGE_OUTPUT_DIR = "./fuzzer_output"
 
 class CrashHandler(threading.Thread):
-    def __init__(self, binary, condition, stop_event):
+    def __init__(self, binary, condition, stop_event, coverage):
         super().__init__(daemon=True)
         self.binary = Path(binary).name
         self.condition = condition
         self.stop_event = stop_event
         self.running = False
         self.crashes = []
+        self.coverage = coverage
 
         self.stats = {
             'crashes_found': 0,
@@ -65,10 +67,16 @@ class CrashHandler(threading.Thread):
             break
 
     def save_crash(self, result, crash_input):
-        os.makedirs(OUTPUT_DIR, exist_ok=True)
-        out_file = os.path.join(OUTPUT_DIR, f"bad_{self.binary}.txt")
-        with open(out_file, "ab") as f:
-            f.write(crash_input)
+        if self.coverage:
+            os.makedirs(COVERAGE_OUTPUT_DIR, exist_ok=True)
+            out_file = os.path.join(COVERAGE_OUTPUT_DIR, f"bad_{self.binary}.txt")
+            with open(out_file, "ab") as f:
+                f.write(crash_input)
+        else:
+            os.makedirs(OUTPUT_DIR, exist_ok=True)
+            out_file = os.path.join(OUTPUT_DIR, f"bad_{self.binary}.txt")
+            with open(out_file, "ab") as f:
+                f.write(crash_input)
 
         # print crash report
         print(f"\n[SUCCESS] Crash found for {self.binary}!")

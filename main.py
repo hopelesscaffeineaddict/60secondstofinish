@@ -39,7 +39,7 @@ def binary_process(binary_path, input_path, coverage, processes_data, global_sto
 
     # create mutator, crash handler and runner threads
     binary_name = os.path.basename(binary_path)
-    crash_handler = CrashHandler(binary_path, crash_condition, stop_event)
+    crash_handler = CrashHandler(binary_path, crash_condition, stop_event, coverage)
     input_format = get_format_from_bytes(input_path, binary_path)
     print(f'[DEBUG] binary_path {binary_path}')
 

@@ -58,7 +58,8 @@ To run fuzzer in Docker, check required folders and compile harness use:
 ```
 ./run_fuzzer.sh
 ```
-With coverage:
+
+To run with coverage:
 ```
-./run_fuzzer.sh [-c/--coverage]
+python3 main.py --binary={binaries_directory} --input={inputs_directory} [-c/--coverage]
 ```
